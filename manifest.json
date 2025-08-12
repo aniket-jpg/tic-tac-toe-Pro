@@ -7,7 +7,15 @@
   "theme_color": "#ff00ff",
   "orientation": "portrait-primary",
   "description": "A classic Tic Tac Toe game with a stunning neon theme. Play against a smart AI or challenge a friend.",
+  "lang": "en-US",
+  "dir": "ltr",
   "id": "/tic-tac-toe-Pro/",
+  "iarc_rating_id": "e84b072d-4522-43b2-9896-787315133682",
+  "categories": [
+    "games",
+    "board_game",
+    "strategy"
+  ],
   "launch_handler": {
     "client_mode": "focus-existing"
   },
