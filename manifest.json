@@ -10,7 +10,7 @@
   "lang": "en-US",
   "dir": "ltr",
   "scope": "/tic-tac-toe-Pro/",
-  "id": "/tic-tac-toe-Pro/",
+  "id": "com.aniflowtech.tictactoepro",
   "iarc_rating_id": "e84b072d-4522-43b2-9896-787315133682",
   "categories": [
     "games",
@@ -50,4 +50,5 @@
     }
   ]
 }
+
 
