@@ -1,11 +1,16 @@
 {
   "name": "Neon Tic Tac Toe Pro",
   "short_name": "NeonTTT",
-  "start_url": "index.html",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#0d0221",
   "theme_color": "#ff00ff",
   "orientation": "portrait-primary",
+  "description": "A classic Tic Tac Toe game with a stunning neon theme. Play against a smart AI or challenge a friend.",
+  "id": "/tic-tac-toe-Pro/",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "icon-192x192.png",
@@ -16,6 +21,22 @@
       "src": "icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Game Board"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Main Menu"
     }
   ]
 }
