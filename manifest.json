@@ -1,0 +1,21 @@
+{
+  "name": "Neon Tic Tac Toe Pro",
+  "short_name": "NeonTTT",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0d0221",
+  "theme_color": "#ff00ff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
