@@ -1,6 +1,6 @@
 {
-  "name": "Neon Tic Tac Toe Pro",
-  "short_name": "NeonTTT",
+  "name": "Tic Tac Toe Pro",
+  "short_name": "TicTacToe",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0d0221",
@@ -50,3 +50,4 @@
     }
   ]
 }
+
