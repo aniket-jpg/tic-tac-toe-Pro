@@ -201,8 +201,7 @@
                     switch (viewId) {
                         case 'mainMenu':
                             state.score = { x: 0, o: 0 }; state.gamesPlayed = 0;
-                            // Set when the first mistake might happen (e.g., after 2 to 5 games)
-                            state.nextMistakeGame = Math.floor(Math.random() * 4) + 2; 
+                            state.nextMistakeGame = Math.floor(Math.random() * 3) + 3;
                             break;
                         case 'symbolSelection': backTarget = 'mainMenu'; break;
                         case 'difficultySelection': backTarget = 'symbolSelection'; break;
@@ -287,6 +286,7 @@
             const ai = {
                 move() {
                     if (!state.isGameActive) return;
+                    // --- EASY AI ---
                     if (state.difficulty === 'easy') {
                         const emptyCells = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
                         if(emptyCells.length > 0) {
@@ -295,23 +295,41 @@
                         }
                         return;
                     }
-                    // --- HARD AI LOGIC ---
-                    const isMistakeTime = state.gamesPlayed >= state.nextMistakeGame;
-                    // 1. Always take a winning move if available.
+                    
+                    // --- HARD AI ---
+                    const availableSpots = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+                    // 1. Opening Book: If AI is first, pick a random strong opening move.
+                    if (availableSpots.length === 9) {
+                        const openingMoves = [4, 0, 2, 6, 8]; // Center and corners are best.
+                        const randomOpeningMove = openingMoves[Math.floor(Math.random() * openingMoves.length)];
+                        game.placeMark(randomOpeningMove, state.aiMark); this.announceMove(randomOpeningMove); game.processMove(state.aiMark);
+                        return;
+                    }
+
+                    // 2. Always take a winning move if available.
                     const aiWinningMove = this.findWinningMove(state.aiMark);
                     if (aiWinningMove !== null) { game.placeMark(aiWinningMove, state.aiMark); this.announceMove(aiWinningMove); game.processMove(state.aiMark); return; }
-                    // 2. Always block the player's winning move. A hard AI should not have such a glaring weakness.
+                    
+                    // 3. Always block the player's immediate winning move.
                     const playerWinningMove = this.findWinningMove(state.playerMark);
                     if (playerWinningMove !== null) { game.placeMark(playerWinningMove, state.aiMark); this.announceMove(playerWinningMove); game.processMove(state.aiMark); return; }
-                    // 3. Follow the optimal minimax strategy, BUT with a chance for a strategic error.
-                    const bestMove = this.minimax([...state.board], state.aiMark).index;
-                    if (isMistakeTime) {
-                        const alternativeMove = this.findPlausibleAlternativeMove(bestMove);
-                        game.placeMark(alternativeMove, state.aiMark); this.announceMove(alternativeMove);
-                        // Reset the mistake counter for the next cycle
-                        state.nextMistakeGame = state.gamesPlayed + Math.floor(Math.random() * 4) + 2; 
+
+                    // 4. Use minimax to decide the best move, with a chance for a strategic mistake.
+                    const isMistakeTime = state.gamesPlayed >= state.nextMistakeGame;
+                    const sortedMoves = this.minimax([...state.board], state.aiMark);
+                    
+                    if (isMistakeTime && sortedMoves.length > 1) {
+                        // Make a "human" mistake: choose the second-best move instead of the best.
+                        const mistakeMove = sortedMoves[1];
+                        game.placeMark(mistakeMove.index, state.aiMark);
+                        this.announceMove(mistakeMove.index);
+                        // Reset the mistake timer for the next cycle.
+                        state.nextMistakeGame = state.gamesPlayed + Math.floor(Math.random() * 3) + 3;
                     } else {
-                        game.placeMark(bestMove, state.aiMark); this.announceMove(bestMove);
+                        // Play the optimal move.
+                        const bestMove = sortedMoves[0];
+                        game.placeMark(bestMove.index, state.aiMark);
+                        this.announceMove(bestMove.index);
                     }
                     game.processMove(state.aiMark);
                 },
@@ -325,34 +343,26 @@
                     }
                     return null;
                 },
-                findPlausibleAlternativeMove(optimalMoveIndex) {
-                    const availableSpots = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
-                    const alternatives = availableSpots.filter(index => index !== optimalMoveIndex);
-                    return alternatives.length > 0 ? alternatives[Math.floor(Math.random() * alternatives.length)] : optimalMoveIndex;
-                },
                 minimax(newBoard, player) {
                     const availableSpots = newBoard.map((v, i) => v === null ? i : null).filter(v => v !== null);
-                    if (game.checkWin(state.playerMark, newBoard)) return { score: -10 };
-                    if (game.checkWin(state.aiMark, newBoard)) return { score: 10 };
-                    if (availableSpots.length === 0) return { score: 0 };
+                    if (game.checkWin(state.playerMark, newBoard)) return [{ score: -10 }];
+                    if (game.checkWin(state.aiMark, newBoard)) return [{ score: 10 }];
+                    if (availableSpots.length === 0) return [{ score: 0 }];
                     const moves = [];
                     for (let i = 0; i < availableSpots.length; i++) {
                         const move = { index: availableSpots[i] };
                         newBoard[availableSpots[i]] = player;
                         const result = this.minimax(newBoard, player === state.aiMark ? state.playerMark : state.aiMark);
-                        move.score = result.score;
+                        move.score = result[0].score;
                         newBoard[availableSpots[i]] = null;
                         moves.push(move);
                     }
-                    let bestMove;
+                    // Return all moves sorted from best to worst
                     if (player === state.aiMark) {
-                        let bestScore = -10000;
-                        for (const move of moves) { if (move.score > bestScore) { bestScore = move.score; bestMove = move; } }
+                        return moves.sort((a, b) => b.score - a.score);
                     } else {
-                        let bestScore = 10000;
-                        for (const move of moves) { if (move.score < bestScore) { bestScore = move.score; bestMove = move; } }
+                        return moves.sort((a, b) => a.score - b.score);
                     }
-                    return bestMove;
                 }
             };
             function setupEventListeners() {
