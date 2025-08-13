@@ -1,15 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-// --- SERVICE WORKER REGISTRATION (WITH SCOPE FOR GITHUB PAGES) ---
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js', { scope: '/tic-tac-toe-Pro/' })
-        .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-        }).catch(error => {
-            console.log('Service Worker registration failed:', error);
-        });
-}
-
     // --- CONSTANTS ---
     const X_CLASS = 'x';
     const O_CLASS = 'o';
@@ -24,11 +14,12 @@ if ('serviceWorker' in navigator) {
         views: document.querySelectorAll('.view'),
         cellElements: document.querySelectorAll('[data-cell-index]'),
         gameBoard: document.getElementById('gameBoard'),
-        winningMessage: {
-            element: document.getElementById('winningMessage'),
-            text: document.getElementById('winningMessage-text')
+        overlays: {
+            winning: document.getElementById('winningMessage'),
+            aiThinking: document.getElementById('aiThinkingOverlay'),
+            exitConfirmation: document.getElementById('exitConfirmationOverlay')
         },
-        aiThinkingOverlay: document.getElementById('aiThinkingOverlay'),
+        winningMessageText: document.getElementById('winningMessage-text'),
         winningLine: {
             svg: document.getElementById('winning-line'),
             line: document.querySelector('#winning-line .line')
@@ -44,7 +35,9 @@ if ('serviceWorker' in navigator) {
             easy: document.getElementById('easyButton'),
             hard: document.getElementById('hardButton'),
             restart: document.getElementById('restartButton'),
-            universalBack: document.getElementById('universalBackButton')
+            universalBack: document.getElementById('universalBackButton'),
+            confirmExit: document.getElementById('confirmExitButton'),
+            cancelExit: document.getElementById('cancelExitButton')
         },
         ariaLiveRegion: document.getElementById('aria-live-region')
     };
@@ -81,38 +74,56 @@ if ('serviceWorker' in navigator) {
                 shard.style.left = `${x}px`;
                 shard.style.backgroundColor = color;
                 container.appendChild(shard);
-                setTimeout(() => shard.remove(), 800);
+                setTimeout(() => shard.remove(), 700);
             }
         }
     };
     
     // --- UI & RENDER FUNCTIONS ---
     const ui = {
+        toggleOverlay: (overlay, show) => overlay.classList.toggle('active', show),
+        
         showView(viewId) {
+            const backButton = dom.buttons.universalBack;
+            const activeView = document.getElementById(viewId);
+            
             dom.views.forEach(view => view.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
+            activeView.classList.add('active');
+
+            let backTarget = null;
+            let isGameScreen = false;
 
             switch (viewId) {
                 case 'mainMenu':
-                    dom.buttons.universalBack.style.display = 'none';
                     state.score = { x: 0, o: 0 };
                     state.gamesPlayed = 0;
                     state.nextMistakeGame = Math.floor(Math.random() * 3) + 3;
                     break;
                 case 'symbolSelection':
-                    dom.buttons.universalBack.style.display = 'block';
-                    dom.buttons.universalBack.dataset.target = 'mainMenu';
+                    backTarget = 'mainMenu';
                     break;
                 case 'difficultySelection':
-                    dom.buttons.universalBack.style.display = 'block';
-                    dom.buttons.universalBack.dataset.target = 'symbolSelection';
+                    backTarget = 'symbolSelection';
                     break;
                 case 'gameScreen':
-                    const backTarget = state.gameMode === 'pvp' ? 'mainMenu' : 'difficultySelection';
-                    dom.buttons.universalBack.style.display = 'block';
-                    dom.buttons.universalBack.dataset.target = backTarget;
+                    backTarget = state.gameMode === 'pvp' ? 'mainMenu' : 'difficultySelection';
+                    isGameScreen = true;
                     game.start();
                     break;
+            }
+            
+            if (backTarget) {
+                backButton.style.display = 'block';
+                backButton.dataset.target = backTarget;
+                backButton.classList.toggle('btn-header', isGameScreen);
+
+                if (isGameScreen) {
+                    document.querySelector('.game-header').prepend(backButton);
+                } else {
+                    activeView.appendChild(backButton);
+                }
+            } else {
+                 backButton.style.display = 'none';
             }
         },
         update() {
@@ -157,11 +168,10 @@ if ('serviceWorker' in navigator) {
         },
         showEndGameMessage(draw) {
             let message = draw ? 'Draw!' : `${state.isOTurn ? 'O' : 'X'} Wins!`;
-            dom.winningMessage.text.innerText = message;
-            dom.winningMessage.element.classList.add('active');
+            dom.winningMessageText.innerText = message;
+            this.toggleOverlay(dom.overlays.winning, true);
             this.announce(message + " Press Play Again to continue.");
         },
-        toggleThinkingOverlay: (show) => dom.aiThinkingOverlay.classList.toggle('active', show),
         announce: (message) => dom.ariaLiveRegion.textContent = message
     };
 
@@ -171,7 +181,7 @@ if ('serviceWorker' in navigator) {
             state.isGameActive = true;
             state.isOTurn = false;
             state.board.fill(null);
-            dom.winningMessage.element.classList.remove('active');
+            ui.toggleOverlay(dom.overlays.winning, false);
             dom.winningLine.svg.style.visibility = 'hidden';
             dom.gameBoard.style.pointerEvents = 'auto';
             ui.update();
@@ -206,8 +216,12 @@ if ('serviceWorker' in navigator) {
             return false;
         },
         triggerAIMove() {
-            ui.toggleThinkingOverlay(true);
-            setTimeout(() => { ai.move(); ui.toggleThinkingOverlay(false); }, Math.random() * 500 + 400); 
+            ui.toggleOverlay(dom.overlays.aiThinking, true);
+            // FASTER AI: Reduced delay for more robust feel
+            setTimeout(() => { 
+                ai.move(); 
+                ui.toggleOverlay(dom.overlays.aiThinking, false);
+            }, Math.random() * 250 + 200); 
         },
         end(draw, winningCombination = null) {
             state.isGameActive = false;
@@ -293,22 +307,28 @@ if ('serviceWorker' in navigator) {
             state.difficulty = e.target.dataset.difficulty;
             ui.showView('gameScreen');
         }));
-        dom.buttons.universalBack.addEventListener('click', (e) => ui.showView(e.target.dataset.target));
+        
+        dom.buttons.universalBack.addEventListener('click', (e) => {
+            const targetViewId = e.target.dataset.target;
+            if (state.isGameActive && document.getElementById('gameScreen').classList.contains('active')) {
+                dom.overlays.exitConfirmation.dataset.target = targetViewId;
+                ui.toggleOverlay(dom.overlays.exitConfirmation, true);
+            } else {
+                ui.showView(targetViewId);
+            }
+        });
+        
+        dom.buttons.cancelExit.addEventListener('click', () => ui.toggleOverlay(dom.overlays.exitConfirmation, false));
+
+        dom.buttons.confirmExit.addEventListener('click', () => {
+            const targetViewId = dom.overlays.exitConfirmation.dataset.target;
+            state.isGameActive = false;
+            ui.toggleOverlay(dom.overlays.exitConfirmation, false);
+            ui.showView(targetViewId);
+        });
+
         dom.buttons.restart.addEventListener('click', () => game.start());
         dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
 
-        // Universal listener for shatter effect on all buttons
         document.querySelectorAll('.btn').forEach(button => {
-            button.addEventListener('mousedown', (e) => { // Use mousedown for instant feedback
-                const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
-                const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
-                effects.createShatter(e.clientX, e.clientY, shatterColor);
-            });
-        });
-    }
-
-    // --- INITIALIZATION ---
-    setupEventListeners();
-    ui.showView('mainMenu');
-
-});
+            button.addEventListener('click', (e).
