@@ -179,14 +179,25 @@
                 isPlayerTurnToStart: true, isOTurn: false, board: Array(9).fill(null),
                 score: { player: 0, ai: 0 }, isGameActive: false, soundOn: true
             };
+            
+            // --- CORRECTED SOUND SYSTEM ---
             const audio = {
                 targetVolume: 0.3,
                 fadeInterval: null,
-                playClick() { if (!state.soundOn) return; dom.sounds.click.currentTime = 0; dom.sounds.click.play().catch(()=>{}); },
-                playWin() { if (!state.soundOn) return; dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); },
-                fadeInMusic() {
+
+                playClick() {
+                    if (!state.soundOn) return;
+                    dom.sounds.click.currentTime = 0;
+                    dom.sounds.click.play().catch(()=>{});
+                },
+                playWin() {
+                    if (!state.soundOn) return;
+                    dom.sounds.win.currentTime = 0;
+                    dom.sounds.win.play().catch(()=>{});
+                },
+                _fadeInMusic() {
                     const music = dom.sounds.bgMusic;
-                    if (this.fadeInterval || !music.paused) return; // Only fade in if paused and not already fading
+                    if (this.fadeInterval || !music.paused) return; 
                     music.volume = 0;
                     const promise = music.play();
                     if (promise !== undefined) {
@@ -199,11 +210,11 @@
                                 } else { music.volume = newVolume; }
                             }, 100);
                         }).catch(() => {
-                            document.body.addEventListener('click', () => this.fadeInMusic(), { once: true });
+                            document.body.addEventListener('click', () => this.updateMusicState(), { once: true });
                         });
                     }
                 },
-                pauseMusic() {
+                _pauseMusic() {
                     clearInterval(this.fadeInterval); this.fadeInterval = null;
                     const music = dom.sounds.bgMusic;
                     if (music.paused) return;
@@ -215,11 +226,12 @@
                     }, 50);
                 },
                 updateMusicState() {
-                    const isMenuScreen = !document.getElementById('gameScreen').classList.contains('active');
-                    if (state.soundOn && isMenuScreen) {
-                        this.fadeInMusic();
+                    const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
+                    // This logic ensures music plays ONLY when sound is ON and a menu screen is active.
+                    if (state.soundOn && !isGameScreenActive) {
+                        this._fadeInMusic();
                     } else {
-                        this.pauseMusic();
+                        this._pauseMusic();
                     }
                 }
             };
@@ -232,6 +244,7 @@
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
+                    // Every time the view changes, update the music state.
                     audio.updateMusicState();
 
                     let backTarget = null; let isGameScreen = false;
@@ -301,7 +314,7 @@
                     if (this.processMove(currentClass)) return;
                     if (state.gameMode === 'pvc') this.triggerAIMove();
                 },
-                placeMark(index, currentClass) { state.board[index] = currentClass; ui.updateBoard(); },
+                placeMark(index, currentClass) { state.board[index] = currentClass; ui.updateBoard(); audio.playClick() },
                 swapTurns() { state.isOTurn = !state.isOTurn; ui.updateTurnIndicator(); ui.announce(`${state.isOTurn ? 'O' : 'X'}'s turn.`); },
                 processMove(currentClass) {
                     const winningCombination = this.checkWin(currentClass);
@@ -384,37 +397,30 @@
                 }
             };
             function setupEventListeners() {
-                // Try to start music on load.
-                audio.fadeInMusic(); 
-                
                 // Sound Toggle Logic
-                dom.buttons.soundToggle.addEventListener('mousedown', () => {
+                dom.buttons.soundToggle.addEventListener('click', () => {
+                    // We play sound first, then toggle state. This allows the click to be heard
+                    // when turning the sound off.
+                    audio.playClick();
                     state.soundOn = !state.soundOn;
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
                     audio.updateMusicState();
-                    // Play click sound *after* updating state, so it respects the new setting.
-                    audio.playClick(); 
                 });
                 
-                // Central handler for instant clicks and shatter effects on all buttons
+                // Central handler for instant shatter effects on all buttons
                 document.querySelectorAll('.btn').forEach(button => {
-                    if (button.id === 'soundToggle') return; // Exclude the sound toggle, which has its own listener
-                    button.addEventListener('mousedown', () => {
+                    if (button.id === 'soundToggle') return;
+                    button.addEventListener('click', (event) => {
                         audio.playClick();
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
                         const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
-                        effects.createShatter(event.clientX, event.clientY, shatterColor);
+                        // effects is not defined in the provided code, so this line would cause an error.
+                        // I've commented it out to ensure the code runs. If you have an `effects` object, you can uncomment it.
+                        // effects.createShatter(event.clientX, event.clientY, shatterColor);
                     });
                 });
                 
-                // Cell clicks for instant sound
-                dom.gameBoard.addEventListener('mousedown', (e) => {
-                    if (e.target.matches('.cell')) {
-                        audio.playClick();
-                    }
-                });
-
-                // Standard 'click' events for game logic (happens after mousedown)
+                // Standard 'click' events for game logic
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
