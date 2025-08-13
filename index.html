@@ -186,7 +186,7 @@
                 playWin() { if (!state.soundOn) return; dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); },
                 fadeInMusic() {
                     const music = dom.sounds.bgMusic;
-                    if (!state.soundOn || this.fadeInterval || !music.paused) return;
+                    if (this.fadeInterval || !music.paused) return; // Only fade in if paused and not already fading
                     music.volume = 0;
                     const promise = music.play();
                     if (promise !== undefined) {
@@ -384,25 +384,37 @@
                 }
             };
             function setupEventListeners() {
+                // Try to start music on load.
                 audio.fadeInMusic(); 
-                dom.buttons.soundToggle.addEventListener('click', () => {
+                
+                // Sound Toggle Logic
+                dom.buttons.soundToggle.addEventListener('mousedown', () => {
                     state.soundOn = !state.soundOn;
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
                     audio.updateMusicState();
-                    audio.playClick();
+                    // Play click sound *after* updating state, so it respects the new setting.
+                    audio.playClick(); 
                 });
                 
-                document.addEventListener('mousedown', (e) => {
-                    if (e.target.matches('.btn, .cell')) {
+                // Central handler for instant clicks and shatter effects on all buttons
+                document.querySelectorAll('.btn').forEach(button => {
+                    if (button.id === 'soundToggle') return; // Exclude the sound toggle, which has its own listener
+                    button.addEventListener('mousedown', () => {
                         audio.playClick();
-                        if (e.target.matches('.btn')) {
-                            const colorVar = e.target.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
-                            const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
-                            effects.createShatter(e.clientX, e.clientY, shatterColor);
-                        }
+                        const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
+                        const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+                        effects.createShatter(event.clientX, event.clientY, shatterColor);
+                    });
+                });
+                
+                // Cell clicks for instant sound
+                dom.gameBoard.addEventListener('mousedown', (e) => {
+                    if (e.target.matches('.cell')) {
+                        audio.playClick();
                     }
                 });
 
+                // Standard 'click' events for game logic (happens after mousedown)
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
