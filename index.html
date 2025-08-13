@@ -180,22 +180,54 @@
                 score: { player: 0, ai: 0 }, isGameActive: false, soundOn: true
             };
             
+            const effects = {
+                createShatter(x, y, color) {
+                    const container = document.getElementById('shatter-container');
+                    const shardCount = 15;
+                    for (let i = 0; i < shardCount; i++) {
+                        const shard = document.createElement('div');
+                        shard.classList.add('shard');
+                        const size = Math.random() * 12 + 5;
+                        shard.style.setProperty('--tx', `${(Math.random() * 250 - 125)}px`);
+                        shard.style.setProperty('--ty', `${(Math.random() * 250 - 125)}px`);
+                        shard.style.setProperty('--rot', `${(Math.random() * 540 - 270)}deg`);
+                        shard.style.width = `${size}px`;
+                        shard.style.height = `${size}px`;
+                        shard.style.top = `${y}px`;
+                        shard.style.left = `${x}px`;
+                        shard.style.backgroundColor = color;
+                        container.appendChild(shard);
+                        setTimeout(() => shard.remove(), 700);
+                    }
+                }
+            };
+            
             // --- CORRECTED SOUND SYSTEM ---
             const audio = {
                 targetVolume: 0.3,
                 fadeInterval: null,
+                hasInteracted: false,
+
+                _handleFirstInteraction() {
+                    if (this.hasInteracted) return;
+                    this.hasInteracted = true;
+                    this.updateMusicState();
+                },
 
                 playClick() {
                     if (!state.soundOn) return;
                     dom.sounds.click.currentTime = 0;
                     dom.sounds.click.play().catch(()=>{});
                 },
+
                 playWin() {
                     if (!state.soundOn) return;
                     dom.sounds.win.currentTime = 0;
                     dom.sounds.win.play().catch(()=>{});
                 },
+
                 _fadeInMusic() {
+                    if (!this.hasInteracted) return;
                     const music = dom.sounds.bgMusic;
                     if (this.fadeInterval || !music.paused) return; 
                     music.volume = 0;
@@ -209,11 +241,13 @@
                                     clearInterval(this.fadeInterval); this.fadeInterval = null;
                                 } else { music.volume = newVolume; }
                             }, 100);
-                        }).catch(() => {
-                            document.body.addEventListener('click', () => this.updateMusicState(), { once: true });
+                        }).catch(error => {
+                            console.error("BG Music playback failed:", error);
+                            this.hasInteracted = false; // Allow another attempt
                         });
                     }
                 },
+
                 _pauseMusic() {
                     clearInterval(this.fadeInterval); this.fadeInterval = null;
                     const music = dom.sounds.bgMusic;
@@ -225,9 +259,9 @@
                         } else { music.volume = newVolume; }
                     }, 50);
                 },
+
                 updateMusicState() {
                     const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
-                    // This logic ensures music plays ONLY when sound is ON and a menu screen is active.
                     if (state.soundOn && !isGameScreenActive) {
                         this._fadeInMusic();
                     } else {
@@ -235,6 +269,7 @@
                     }
                 }
             };
+
             const ui = {
                 toggleOverlay: (overlay, show) => overlay.classList.toggle('active', show),
                 showView(viewId) {
@@ -244,7 +279,6 @@
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
-                    // Every time the view changes, update the music state.
                     audio.updateMusicState();
 
                     let backTarget = null; let isGameScreen = false;
@@ -294,6 +328,7 @@
                 },
                 announce: (message) => dom.ariaLiveRegion.textContent = message
             };
+
             const game = {
                 start() {
                     state.isGameActive = true; state.isOTurn = false; state.board.fill(null);
@@ -314,7 +349,7 @@
                     if (this.processMove(currentClass)) return;
                     if (state.gameMode === 'pvc') this.triggerAIMove();
                 },
-                placeMark(index, currentClass) { state.board[index] = currentClass; ui.updateBoard(); audio.playClick() },
+                placeMark(index, currentClass) { state.board[index] = currentClass; ui.updateBoard(); },
                 swapTurns() { state.isOTurn = !state.isOTurn; ui.updateTurnIndicator(); ui.announce(`${state.isOTurn ? 'O' : 'X'}'s turn.`); },
                 processMove(currentClass) {
                     const winningCombination = this.checkWin(currentClass);
@@ -397,30 +432,37 @@
                 }
             };
             function setupEventListeners() {
-                // Sound Toggle Logic
-                dom.buttons.soundToggle.addEventListener('click', () => {
-                    // We play sound first, then toggle state. This allows the click to be heard
-                    // when turning the sound off.
-                    audio.playClick();
+                // One-time listeners to unlock audio on the first user interaction.
+                document.body.addEventListener('click', () => audio._handleFirstInteraction(), { once: true });
+                document.body.addEventListener('touchend', () => audio._handleFirstInteraction(), { once: true });
+
+                // Sound Toggle Logic (uses mousedown for immediate feedback)
+                dom.buttons.soundToggle.addEventListener('mousedown', () => {
                     state.soundOn = !state.soundOn;
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
+                    audio.playClick();
                     audio.updateMusicState();
                 });
                 
-                // Central handler for instant shatter effects on all buttons
+                // Central handler for button sounds and shatter effects
                 document.querySelectorAll('.btn').forEach(button => {
-                    if (button.id === 'soundToggle') return;
-                    button.addEventListener('click', (event) => {
+                    if (button.id === 'soundToggle') return; // Exclude the sound toggle, which has its own listener
+                    button.addEventListener('mousedown', (event) => {
                         audio.playClick();
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
                         const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
-                        // effects is not defined in the provided code, so this line would cause an error.
-                        // I've commented it out to ensure the code runs. If you have an `effects` object, you can uncomment it.
-                        // effects.createShatter(event.clientX, event.clientY, shatterColor);
+                        effects.createShatter(event.clientX, event.clientY, shatterColor);
                     });
                 });
                 
-                // Standard 'click' events for game logic
+                // Cell sounds on mousedown
+                dom.gameBoard.addEventListener('mousedown', (e) => {
+                    if (e.target.matches('.cell:not(.x):not(.o)')) {
+                        audio.playClick();
+                    }
+                });
+
+                // Standard 'click' events for game logic (happens after mousedown)
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
@@ -437,6 +479,7 @@
                 dom.buttons.restart.addEventListener('click', () => game.start());
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
             }
+
             setupEventListeners();
             ui.showView('mainMenu');
         });
