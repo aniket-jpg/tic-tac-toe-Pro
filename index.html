@@ -186,7 +186,7 @@
                 playWin() { if (!state.soundOn) return; dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); },
                 fadeInMusic() {
                     const music = dom.sounds.bgMusic;
-                    if (!state.soundOn || this.fadeInterval || !music.paused) return; // The BUG FIX is here: check if music is paused
+                    if (!state.soundOn || this.fadeInterval || !music.paused) return;
                     music.volume = 0;
                     const promise = music.play();
                     if (promise !== undefined) {
@@ -206,7 +206,7 @@
                 pauseMusic() {
                     clearInterval(this.fadeInterval); this.fadeInterval = null;
                     const music = dom.sounds.bgMusic;
-                    if(music.paused) return;
+                    if (music.paused) return;
                     const fadeOutInterval = setInterval(() => {
                         let newVolume = music.volume - 0.05;
                         if (newVolume <= 0) {
@@ -224,8 +224,11 @@
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
-                    if (viewId === 'gameScreen') { audio.pauseMusic(); } 
-                    else if (state.soundOn) { audio.fadeInMusic(); }
+                    if (viewId === 'gameScreen') {
+                        audio.pauseMusic();
+                    } else if (state.soundOn) {
+                        audio.fadeInMusic();
+                    }
 
                     let backTarget = null; let isGameScreen = false;
                     switch (viewId) {
@@ -243,8 +246,7 @@
                         soundButton.style.display = 'block'; activeView.appendChild(soundButton); soundButton.classList.remove('btn-header');
                     } else if (isGameScreen) {
                         soundButton.style.display = 'block'; document.querySelector('.game-header').appendChild(soundButton); soundButton.classList.add('btn-header');
-                    }
-                    else { soundButton.style.display = 'none'; }
+                    } else { soundButton.style.display = 'none'; }
                 },
                 update() { this.updateBoard(); this.updateTurnIndicator(); this.updateScoreDisplay(); },
                 updateBoard() { dom.cellElements.forEach((cell, index) => { cell.className = 'cell'; if (state.board[index]) cell.classList.add(state.board[index]); }); },
@@ -379,15 +381,29 @@
                 }
             };
             function setupEventListeners() {
+                // Try to start music on load, but don't worry if it fails.
                 audio.fadeInMusic(); 
+                
+                // Sound Toggle Logic
                 dom.buttons.soundToggle.addEventListener('click', () => {
-                    audio.playClick();
+                    // This click sound should play even if sound is being turned off.
+                    if (state.soundOn) audio.playClick();
+                    
                     state.soundOn = !state.soundOn;
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
-                    if (state.soundOn) { audio.fadeInMusic(); }
-                    else { audio.pauseMusic(); }
+                    
+                    if (state.soundOn) {
+                        // If we are on a menu screen, start the music.
+                        if (!document.getElementById('gameScreen').classList.contains('active')) {
+                           audio.fadeInMusic();
+                        }
+                    } else {
+                        // If sound is turned off, pause everything.
+                        audio.pauseMusic();
+                    }
                 });
                 
+                // Wrapper for all other buttons to play click sound first
                 function handleButtonClick(action) {
                     audio.playClick();
                     action();
@@ -411,7 +427,7 @@
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
                 
                 document.querySelectorAll('.btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
+                    button.addEventListener('mousedown', (e) => { // Use mousedown for instant shatter effect
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
                         const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
                         effects.createShatter(e.clientX, e.clientY, shatterColor);
