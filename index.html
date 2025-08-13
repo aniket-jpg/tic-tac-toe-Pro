@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <base target="_top">
-    <title>Tic Tac Toe Pro</title>
+    <title>Neon Tic Tac Toe Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -202,10 +202,8 @@
                 }
             };
             
-            // --- CORRECTED SOUND SYSTEM ---
+            // --- REFINED SOUND SYSTEM WITH INSTANT MASTER CONTROL ---
             const audio = {
-                targetVolume: 0.3,
-                fadeInterval: null,
                 hasInteracted: false,
 
                 _handleFirstInteraction() {
@@ -226,46 +224,27 @@
                     dom.sounds.win.play().catch(()=>{});
                 },
 
-                _fadeInMusic() {
+                updateMusicState() {
                     if (!this.hasInteracted) return;
+                    const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
                     const music = dom.sounds.bgMusic;
-                    if (this.fadeInterval || !music.paused) return; 
-                    music.volume = 0;
-                    const promise = music.play();
-                    if (promise !== undefined) {
-                        promise.then(() => {
-                            this.fadeInterval = setInterval(() => {
-                                let newVolume = music.volume + 0.05;
-                                if (newVolume >= this.targetVolume) {
-                                    music.volume = this.targetVolume;
-                                    clearInterval(this.fadeInterval); this.fadeInterval = null;
-                                } else { music.volume = newVolume; }
-                            }, 100);
-                        }).catch(error => {
-                            console.error("BG Music playback failed:", error);
-                            this.hasInteracted = false; // Allow another attempt
-                        });
+
+                    if (state.soundOn && !isGameScreenActive) {
+                        if (music.paused) {
+                            music.play().catch(e => console.error("Music playback failed", e));
+                        }
+                    } else {
+                        if (!music.paused) {
+                            music.pause();
+                        }
                     }
                 },
 
-                _pauseMusic() {
-                    clearInterval(this.fadeInterval); this.fadeInterval = null;
-                    const music = dom.sounds.bgMusic;
-                    if (music.paused) return;
-                    const fadeOutInterval = setInterval(() => {
-                        let newVolume = music.volume - 0.05;
-                        if (newVolume <= 0) {
-                            music.volume = 0; music.pause(); clearInterval(fadeOutInterval);
-                        } else { music.volume = newVolume; }
-                    }, 50);
-                },
-
-                updateMusicState() {
-                    const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
-                    if (state.soundOn && !isGameScreenActive) {
-                        this._fadeInMusic();
-                    } else {
-                        this._pauseMusic();
+                stopAllSounds() {
+                    for (const key in dom.sounds) {
+                        const sound = dom.sounds[key];
+                        sound.pause();
+                        sound.currentTime = 0;
                     }
                 }
             };
@@ -279,6 +258,7 @@
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
+                    // Every time the view changes, this function decides if music should play or stop.
                     audio.updateMusicState();
 
                     let backTarget = null; let isGameScreen = false;
@@ -436,17 +416,24 @@
                 document.body.addEventListener('click', () => audio._handleFirstInteraction(), { once: true });
                 document.body.addEventListener('touchend', () => audio._handleFirstInteraction(), { once: true });
 
-                // Sound Toggle Logic (uses mousedown for immediate feedback)
+                // --- Sound Toggle Logic with INSTANT MASTER CONTROL ---
                 dom.buttons.soundToggle.addEventListener('mousedown', () => {
-                    state.soundOn = !state.soundOn;
+                    state.soundOn = !state.soundOn; 
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
-                    audio.playClick();
-                    audio.updateMusicState();
+
+                    if (state.soundOn) {
+                        // Turning sound ON: Play a click for feedback and update music.
+                        audio.playClick();
+                        audio.updateMusicState();
+                    } else {
+                        // Turning sound OFF: Stop everything instantly.
+                        audio.stopAllSounds();
+                    }
                 });
                 
                 // Central handler for button sounds and shatter effects
                 document.querySelectorAll('.btn').forEach(button => {
-                    if (button.id === 'soundToggle') return; // Exclude the sound toggle, which has its own listener
+                    if (button.id === 'soundToggle') return; 
                     button.addEventListener('mousedown', (event) => {
                         audio.playClick();
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
@@ -462,7 +449,7 @@
                     }
                 });
 
-                // Standard 'click' events for game logic (happens after mousedown)
+                // Standard 'click' events for game logic
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
@@ -476,7 +463,10 @@
                     ui.toggleOverlay(dom.overlays.exitConfirmation, false);
                     ui.showView(dom.buttons.universalBack.dataset.target);
                 });
-                dom.buttons.restart.addEventListener('click', () => game.start());
+                dom.buttons.restart.addEventListener('click', () => {
+                    audio.playClick();
+                    game.start();
+                });
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
             }
 
@@ -486,4 +476,3 @@
     </script>
 </body>
 </html>
-
