@@ -213,6 +213,14 @@
                             music.volume = 0; music.pause(); clearInterval(fadeOutInterval);
                         } else { music.volume = newVolume; }
                     }, 50);
+                },
+                updateMusicState() {
+                    const isMenuScreen = !document.getElementById('gameScreen').classList.contains('active');
+                    if (state.soundOn && isMenuScreen) {
+                        this.fadeInMusic();
+                    } else {
+                        this.pauseMusic();
+                    }
                 }
             };
             const ui = {
@@ -224,11 +232,7 @@
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
-                    if (viewId === 'gameScreen') {
-                        audio.pauseMusic();
-                    } else if (state.soundOn) {
-                        audio.fadeInMusic();
-                    }
+                    audio.updateMusicState();
 
                     let backTarget = null; let isGameScreen = false;
                     switch (viewId) {
@@ -288,7 +292,6 @@
                     if (!state.isPlayerTurnToStart) this.triggerAIMove();
                 },
                 handleCellClick(e) {
-                    audio.playClick();
                     if (!e.target.matches('[data-cell-index]')) return;
                     const index = parseInt(e.target.dataset.cellIndex);
                     if (!state.isGameActive || state.board[index] !== null) return;
@@ -381,58 +384,40 @@
                 }
             };
             function setupEventListeners() {
-                // Try to start music on load, but don't worry if it fails.
                 audio.fadeInMusic(); 
-                
-                // Sound Toggle Logic
                 dom.buttons.soundToggle.addEventListener('click', () => {
-                    // This click sound should play even if sound is being turned off.
-                    if (state.soundOn) audio.playClick();
-                    
                     state.soundOn = !state.soundOn;
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
-                    
-                    if (state.soundOn) {
-                        // If we are on a menu screen, start the music.
-                        if (!document.getElementById('gameScreen').classList.contains('active')) {
-                           audio.fadeInMusic();
-                        }
-                    } else {
-                        // If sound is turned off, pause everything.
-                        audio.pauseMusic();
-                    }
+                    audio.updateMusicState();
+                    audio.playClick();
                 });
                 
-                // Wrapper for all other buttons to play click sound first
-                function handleButtonClick(action) {
-                    audio.playClick();
-                    action();
-                }
+                document.addEventListener('mousedown', (e) => {
+                    if (e.target.matches('.btn, .cell')) {
+                        audio.playClick();
+                        if (e.target.matches('.btn')) {
+                            const colorVar = e.target.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
+                            const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+                            effects.createShatter(e.clientX, e.clientY, shatterColor);
+                        }
+                    }
+                });
 
-                dom.buttons.pvp.addEventListener('click', () => handleButtonClick(() => { state.gameMode = 'pvp'; ui.showView('gameScreen'); }));
-                dom.buttons.pvc.addEventListener('click', () => handleButtonClick(() => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); }));
-                [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => handleButtonClick(() => {
+                dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
+                dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
+                [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
                     state.difficulty = e.target.dataset.difficulty;
                     ui.showView('gameScreen');
-                })));
-                dom.buttons.universalBack.addEventListener('click', () => handleButtonClick(() => { ui.toggleOverlay(dom.overlays.exitConfirmation, true); }));
-                dom.buttons.cancelExit.addEventListener('click', () => handleButtonClick(() => { ui.toggleOverlay(dom.overlays.exitConfirmation, false); }));
-                dom.buttons.confirmExit.addEventListener('click', () => handleButtonClick(() => {
+                }));
+                dom.buttons.universalBack.addEventListener('click', () => { ui.toggleOverlay(dom.overlays.exitConfirmation, true); });
+                dom.buttons.cancelExit.addEventListener('click', () => { ui.toggleOverlay(dom.overlays.exitConfirmation, false); });
+                dom.buttons.confirmExit.addEventListener('click', () => {
                     state.isGameActive = false;
                     ui.toggleOverlay(dom.overlays.exitConfirmation, false);
                     ui.showView(dom.buttons.universalBack.dataset.target);
-                }));
-                dom.buttons.restart.addEventListener('click', () => handleButtonClick(() => game.start()));
-                
-                dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
-                
-                document.querySelectorAll('.btn').forEach(button => {
-                    button.addEventListener('mousedown', (e) => { // Use mousedown for instant shatter effect
-                        const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
-                        const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
-                        effects.createShatter(e.clientX, e.clientY, shatterColor);
-                    });
                 });
+                dom.buttons.restart.addEventListener('click', () => game.start());
+                dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
             }
             setupEventListeners();
             ui.showView('mainMenu');
