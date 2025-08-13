@@ -94,6 +94,18 @@
         #winningMessage-text { font-size: clamp(3rem, 12vw, 5rem); text-shadow: 0 0 10px #fff, 0 0 40px var(--color-x); margin-bottom: 1rem; }
         #ai-thinking-text { font-size: 2rem; color: var(--color-o); text-shadow: 0 0 10px var(--color-o); }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+        /* --- Style for the fixed corner button --- */
+        #soundToggle {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000; /* Ensures it's on top of everything */
+            width: auto;
+            margin: 0;
+            padding: 10px 15px;
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -103,11 +115,13 @@
     <audio id="winSound" src="sounds/win.mp3"></audio>
     <audio id="sparkSound" src="sounds/spark.mp3"></audio>
 
+    <!-- Fixed Corner Button -->
+    <button id="soundToggle" class="btn btn-secondary">🔊</button>
+
     <div id="aria-live-region" class="sr-only" aria-live="polite"></div>
     <div id="shatter-container"></div>
     <div class="app-container">
-        <!-- Universal Buttons: Moved by JavaScript -->
-        <button id="soundToggle" class="btn btn-secondary">🔊</button>
+        <!-- The back button will be moved here by JS when needed -->
         <button id="universalBackButton" class="btn btn-secondary" style="display: none;" aria-label="Go back">Back</button>
 
         <div id="mainMenu" class="view active">
@@ -265,7 +279,6 @@
                 toggleOverlay: (overlay, show) => overlay.classList.toggle('active', show),
                 showView(viewId) {
                     const backButton = dom.buttons.universalBack;
-                    const soundButton = dom.buttons.soundToggle;
                     const activeView = document.getElementById(viewId);
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
@@ -278,17 +291,20 @@
                         case 'difficultySelection': backTarget = 'mainMenu'; break;
                         case 'gameScreen': backTarget = (state.gameMode === 'pvp') ? 'mainMenu' : 'difficultySelection'; isGameScreen = true; game.start(); break;
                     }
+
                     if (backTarget) {
-                        backButton.style.display = 'block'; backButton.dataset.target = backTarget;
+                        backButton.style.display = 'block';
+                        backButton.dataset.target = backTarget;
                         backButton.classList.toggle('btn-header', isGameScreen);
-                        if (isGameScreen) { document.querySelector('.game-header').prepend(backButton); } else { activeView.appendChild(backButton); }
-                    } else { backButton.style.display = 'none'; }
-                    
-                    if (['mainMenu', 'difficultySelection'].includes(viewId)) {
-                        soundButton.style.display = 'block'; activeView.appendChild(soundButton); soundButton.classList.remove('btn-header');
-                    } else if (isGameScreen) {
-                        soundButton.style.display = 'block'; document.querySelector('.game-header').appendChild(soundButton); soundButton.classList.add('btn-header');
-                    } else { soundButton.style.display = 'none'; }
+                        if (isGameScreen) {
+                            document.querySelector('.game-header').prepend(backButton);
+                        } else {
+                            // The back button is placed inside the active view for menu screens.
+                            activeView.appendChild(backButton);
+                        }
+                    } else {
+                        backButton.style.display = 'none';
+                    }
                 },
                 update() { this.updateBoard(); this.updateTurnIndicator(); this.updateScoreDisplay(); },
                 updateBoard() { dom.cellElements.forEach((cell, index) => { cell.className = 'cell'; if (state.board[index]) cell.classList.add(state.board[index]); }); },
