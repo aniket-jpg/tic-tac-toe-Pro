@@ -1,13 +1,14 @@
-/* --- PRO-GAMER NEON CSS V2 --- */
+/* --- PRO-GAMER NEON CSS V2.1 (Performance & Smoothness Update) --- */
 :root {
     --background-color: #0d0221;
     --grid-color: #ff00ff; /* Magenta */
     --color-o: #00d9ff;      /* Vivid Cyan */
     --color-x: #ff1b8d;      /* Hot Pink */
     --text-color: #f5f5f5;
-    --overlay-color: rgba(13, 2, 33, 0.7);
+    --overlay-color: rgba(13, 2, 33, 0.75);
     --bg-grad-1: #0d0221;
     --bg-grad-2: #240b36;
+    --fast-bezier: cubic-bezier(0.25, 0.8, 0.25, 1); /* Snappy animation curve */
 }
 
 html, body {
@@ -27,24 +28,24 @@ html, body {
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
     padding: 20px; box-sizing: border-box;
-    position: relative; /* Anchors the back button */
+    position: relative; 
 }
 
 .view {
     width: 100%; height: 100%;
     display: none; flex-direction: column;
     justify-content: center; align-items: center;
-    text-align: center; animation: fadeIn 0.5s ease-in-out;
+    text-align: center; animation: fadeIn 0.4s var(--fast-bezier);
 }
 
 .view.active { display: flex; }
 
 /* --- Animations --- */
-@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 @keyframes popIn { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes drawLine { to { stroke-dashoffset: 0; } }
 @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 10px, 0 0 20px; } 50% { transform: scale(1.05); box-shadow: 0 0 20px, 0 0 40px; } }
-@keyframes scoreUpdate { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+@keyframes scoreUpdate { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
 @keyframes neonFlicker {
     0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
         text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px var(--color-o), 0 0 20px var(--color-o), 0 0 25px var(--color-o), 0 0 30px var(--color-o), 0 0 35px var(--color-o);
@@ -64,43 +65,44 @@ h1 {
     font-family: 'Orbitron', sans-serif; font-weight: 700;
     font-size: clamp(1rem, 4vw, 1.2rem); padding: 16px 32px;
     margin: 10px; cursor: pointer; border-radius: 10px;
-    transition: all 0.3s ease-in-out; width: 80%; max-width: 300px;
+    transition: transform 0.2s var(--fast-bezier), box-shadow 0.2s var(--fast-bezier), background-color 0.2s var(--fast-bezier);
+    width: 80%; max-width: 300px;
     background: transparent; border: 2px solid; text-shadow: 0 0 8px;
     box-shadow: inset 0 0 10px 0px, 0 0 10px 0px;
     position: relative;
     z-index: 1;
 }
 .btn-primary { color: var(--color-x); border-color: var(--color-x); }
-.btn-primary:hover, .btn-primary:focus { color: var(--background-color); background: var(--color-x); box-shadow: 0 0 20px var(--color-x), 0 0 35px var(--color-x); transform: translateY(-4px) scale(1.02); outline: none; }
+.btn-primary:hover, .btn-primary:focus { color: var(--background-color); background-color: var(--color-x); box-shadow: 0 0 20px var(--color-x), 0 0 35px var(--color-x); transform: translateY(-4px) scale(1.02); outline: none; }
 .btn-secondary { color: var(--color-o); border-color: var(--color-o); }
-.btn-secondary:hover, .btn-secondary:focus { color: var(--background-color); background: var(--color-o); box-shadow: 0 0 20px var(--color-o), 0 0 35px var(--color-o); transform: translateY(-4px) scale(1.02); outline: none; }
+.btn-secondary:hover, .btn-secondary:focus { color: var(--background-color); background-color: var(--color-o); box-shadow: 0 0 20px var(--color-o), 0 0 35px var(--color-o); transform: translateY(-4px) scale(1.02); outline: none; }
 
-.btn-back {
-    position: absolute; /* Now relative to .app-container */
-    top: 20px;
-    left: 20px;
+.btn:active {
+    transform: translateY(0px) scale(0.96);
+    filter: brightness(1.1);
+}
+
+/* Modifier for small header button */
+.btn.btn-header {
     width: auto;
     padding: 8px 16px;
     font-size: 0.9rem;
-    z-index: 10;
 }
 
 /* --- Shatter Effect --- */
 #shatter-container {
-    position: fixed;
-    top: 0; left: 0;
+    position: fixed; top: 0; left: 0;
     width: 100vw; height: 100vh;
-    pointer-events: none;
-    z-index: 9999;
+    pointer-events: none; z-index: 9999;
 }
 .shard {
     position: absolute;
     transform-origin: center;
-    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* Rhombus shape */
-    animation: shatter 0.8s ease-out forwards;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    animation: shatter 0.7s ease-out forwards;
 }
 @keyframes shatter {
-    0% { transform: translate(0, 0) rotate(0deg) scale(1.2); opacity: 1; }
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
     100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0); opacity: 0; }
 }
 
@@ -108,8 +110,8 @@ h1 {
 .game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .score-display, .turn-display { font-size: 1.5rem; padding: 5px 15px; border-radius: 8px; }
 .score-display { text-shadow: 0 0 5px var(--text-color); }
-.score-display .score { display: inline-block; transition: transform 0.3s; }
-.score-display .score.updated { animation: scoreUpdate 0.4s ease-out; }
+.score-display .score { display: inline-block; transition: transform 0.3s var(--fast-bezier); }
+.score-display .score.updated { animation: scoreUpdate 0.4s var(--fast-bezier); }
 
 .turn-display { transition: color 0.3s, text-shadow 0.3s; }
 .turn-display.x { color: var(--color-x); text-shadow: 0 0 10px var(--color-x); }
@@ -127,12 +129,12 @@ h1 {
 .cell {
     background-color: var(--background-color); border-radius: 4px; display: flex;
     justify-content: center; align-items: center; font-size: calc(var(--cell-size) * 0.8);
-    cursor: pointer; transition: background-color 0.2s ease;
+    cursor: pointer; transition: background-color 0.2s;
 }
 #gameBoard.turn-x .cell:not(.x):not(.o):hover { background-color: #3d0f31; }
 #gameBoard.turn-o .cell:not(.x):not(.o):hover { background-color: #0c324e; }
 
-.cell.x::before, .cell.o::before { animation: popIn 0.3s ease-out; }
+.cell.x::before, .cell.o::before { animation: popIn 0.3s var(--fast-bezier); }
 .cell.x::before { content: 'X'; color: var(--color-x); text-shadow: 0 0 5px, 0 0 15px, 0 0 30px; }
 .cell.o::before { content: 'O'; color: var(--color-o); text-shadow: 0 0 5px, 0 0 15px, 0 0 30px; }
 .cell.winning-cell { animation: pulse 1s ease-in-out infinite; }
@@ -140,14 +142,17 @@ h1 {
 #winning-line { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
 #winning-line .line { stroke-width: 8px; stroke-linecap: round; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: drawLine 0.8s ease-out forwards; }
 
-/* --- Overlays (Winning Message & AI Thinking) --- */
+/* --- Overlays (Winning Message, AI Thinking, Exit Confirmation) --- */
 .overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--overlay-color);
     backdrop-filter: blur(8px);
     display: flex; flex-direction: column; justify-content: center; align-items: center;
-    opacity: 0; pointer-events: none; transition: opacity 0.5s ease; z-index: 100;
+    opacity: 0; pointer-events: none; transform: scale(1.05);
+    transition: opacity 0.3s var(--fast-bezier), transform 0.3s var(--fast-bezier); 
+    z-index: 100;
 }
-.overlay.active { opacity: 1; pointer-events: all; }
+.overlay.active { opacity: 1; pointer-events: all; transform: scale(1); }
+.overlay-text { font-size: clamp(2rem, 8vw, 2.5rem); margin-bottom: 1.5rem; text-shadow: 0 0 10px #fff;}
 #winningMessage-text { font-size: clamp(3rem, 12vw, 5rem); text-shadow: 0 0 10px #fff, 0 0 40px var(--color-x); margin-bottom: 1rem; }
 #ai-thinking-text { font-size: 2rem; color: var(--color-o); text-shadow: 0 0 10px var(--color-o); }
 
