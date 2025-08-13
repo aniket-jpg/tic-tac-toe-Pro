@@ -2,15 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
-    
-    <!-- Link to your new CSS file -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ff00ff">
+    <base target="_top">
+    <title>Neon Tic Tac Toe Pro</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Link to the Web App Manifest -->
     <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Screen reader status updates -->
@@ -21,8 +19,8 @@
 
     <!-- App Container -->
     <div class="app-container">
-        <!-- Universal Back Button: Position is fixed, behavior is controlled by JS -->
-        <button id="universalBackButton" class="btn btn-secondary btn-back" style="display: none;" aria-label="Go back">Back</button>
+        <!-- Universal Back Button: MOVED BY JAVASCRIPT -->
+        <button id="universalBackButton" class="btn btn-secondary" style="display: none;" aria-label="Go back">Back</button>
 
         <!-- Main Menu View -->
         <div id="mainMenu" class="view active">
@@ -69,9 +67,13 @@
         <div id="aiThinkingOverlay" class="overlay">
             <div id="ai-thinking-text">AI is thinking...</div>
         </div>
+        <div id="exitConfirmationOverlay" class="overlay">
+            <div class="overlay-text">Exit current match?</div>
+            <button id="confirmExitButton" class="btn btn-primary">Yes, Exit</button>
+            <button id="cancelExitButton" class="btn btn-secondary">No, Stay</button>
+        </div>
     </div>
     
-    <!-- Link to your new JavaScript file -->
     <script src="script.js"></script>
 </body>
 </html>
