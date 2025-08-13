@@ -101,12 +101,13 @@
     <audio id="bgMusic" src="sounds/bg-music.mp3" loop></audio>
     <audio id="clickSound" src="sounds/click.mp3"></audio>
     <audio id="winSound" src="sounds/win.mp3"></audio>
+    <audio id="sparkSound" src="sounds/spark.mp3"></audio>
 
     <div id="aria-live-region" class="sr-only" aria-live="polite"></div>
     <div id="shatter-container"></div>
     <div class="app-container">
         <!-- Universal Buttons: Moved by JavaScript -->
-        <button id="soundToggle" class="btn btn-secondary">🔊 Sound On</button>
+        <button id="soundToggle" class="btn btn-secondary">🔊</button>
         <button id="universalBackButton" class="btn btn-secondary" style="display: none;" aria-label="Go back">Back</button>
 
         <div id="mainMenu" class="view active">
@@ -157,6 +158,7 @@
                 { combo: [0, 4, 8], name: 'd1' }, { combo: [2, 4, 6], name: 'd2' }
             ];
             const dom = {
+                appContainer: document.querySelector('.app-container'),
                 views: document.querySelectorAll('.view'),
                 cellElements: document.querySelectorAll('[data-cell-index]'),
                 gameBoard: document.getElementById('gameBoard'),
@@ -164,7 +166,12 @@
                 winningMessageText: document.getElementById('winningMessage-text'),
                 winningLine: { svg: document.getElementById('winning-line'), line: document.querySelector('#winning-line .line') },
                 displays: { score: document.getElementById('score-display'), turn: document.getElementById('turn-display') },
-                sounds: { bgMusic: document.getElementById('bgMusic'), click: document.getElementById('clickSound'), win: document.getElementById('winSound') },
+                sounds: { 
+                    bgMusic: document.getElementById('bgMusic'), 
+                    click: document.getElementById('clickSound'), 
+                    win: document.getElementById('winSound'),
+                    spark: document.getElementById('sparkSound')
+                },
                 buttons: {
                     pvc: document.getElementById('pvcButton'), pvp: document.getElementById('pvpButton'),
                     easy: document.getElementById('easyButton'), hard: document.getElementById('hardButton'),
@@ -202,10 +209,7 @@
                 }
             };
             
-            // --- CORRECTED SOUND SYSTEM ---
             const audio = {
-                targetVolume: 0.3,
-                fadeInterval: null,
                 hasInteracted: false,
 
                 _handleFirstInteraction() {
@@ -219,6 +223,12 @@
                     dom.sounds.click.currentTime = 0;
                     dom.sounds.click.play().catch(()=>{});
                 },
+                
+                playSpark() {
+                    if (!state.soundOn) return;
+                    dom.sounds.spark.currentTime = 0;
+                    dom.sounds.spark.play().catch(()=>{});
+                },
 
                 playWin() {
                     if (!state.soundOn) return;
@@ -226,44 +236,27 @@
                     dom.sounds.win.play().catch(()=>{});
                 },
 
-                _fadeInMusic() {
-                    if (!this.hasInteracted) return;
-                    const music = dom.sounds.bgMusic;
-                    if (this.fadeInterval || !music.paused) return; 
-                    music.volume = 0;
-                    const promise = music.play();
-                    if (promise !== undefined) {
-                        promise.then(() => {
-                            this.fadeInterval = setInterval(() => {
-                                let newVolume = music.volume + 0.05;
-                                if (newVolume >= this.targetVolume) {
-                                    music.volume = this.targetVolume;
-                                    clearInterval(this.fadeInterval); this.fadeInterval = null;
-                                } else { music.volume = newVolume; }
-                            }, 100);
-                        }).catch(error => {
-                            console.error("BG Music playback failed:", error);
-                            this.hasInteracted = false; 
-                        });
-                    }
-                },
-
-                // This function now stops the music instantly, without fading.
-                _pauseMusicInstantly() {
-                    clearInterval(this.fadeInterval); 
-                    this.fadeInterval = null;
-                    const music = dom.sounds.bgMusic;
-                    if (!music.paused) {
-                        music.pause();
-                    }
-                },
-
                 updateMusicState() {
+                    if (!this.hasInteracted) return;
                     const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
+                    const music = dom.sounds.bgMusic;
+
                     if (state.soundOn && !isGameScreenActive) {
-                        this._fadeInMusic();
+                        if (music.paused) {
+                            music.play().catch(e => console.error("Music playback failed", e));
+                        }
                     } else {
-                        this._pauseMusicInstantly();
+                        if (!music.paused) {
+                            music.pause();
+                        }
+                    }
+                },
+
+                stopAllSounds() {
+                    for (const key in dom.sounds) {
+                        const sound = dom.sounds[key];
+                        sound.pause();
+                        sound.currentTime = 0;
                     }
                 }
             };
@@ -276,7 +269,7 @@
                     const activeView = document.getElementById(viewId);
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
-
+                    
                     audio.updateMusicState();
 
                     let backTarget = null; let isGameScreen = false;
@@ -430,48 +423,47 @@
                 }
             };
             function setupEventListeners() {
-                // One-time listeners to unlock audio on the first user interaction.
                 document.body.addEventListener('click', () => audio._handleFirstInteraction(), { once: true });
                 document.body.addEventListener('touchend', () => audio._handleFirstInteraction(), { once: true });
 
-                // --- Sound Toggle Logic with INSTANT STOP ---
                 dom.buttons.soundToggle.addEventListener('mousedown', () => {
-                    state.soundOn = !state.soundOn; // Toggle the state
-                    dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
+                    state.soundOn = !state.soundOn; 
+                    dom.buttons.soundToggle.textContent = state.soundOn ? "🔊" : "🔇";
 
                     if (state.soundOn) {
-                        // Turning sound ON
                         audio.playClick();
                         audio.updateMusicState();
                     } else {
-                        // Turning sound OFF: Instantly stop and reset all sounds.
-                        for (const key in dom.sounds) {
-                            const sound = dom.sounds[key];
-                            sound.pause();
-                            sound.currentTime = 0;
-                        }
+                        audio.stopAllSounds();
                     }
                 });
                 
-                // Central handler for button sounds and shatter effects
+                dom.appContainer.addEventListener('mousedown', (event) => {
+                    if (event.target.closest('.btn') || event.target.closest('.cell')) {
+                        return;
+                    }
+                    const randomColorVar = Math.random() < 0.5 ? '--color-x' : '--color-o';
+                    const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(randomColorVar).trim();
+                    effects.createShatter(event.clientX, event.clientY, shatterColor);
+                    audio.playSpark();
+                });
+
                 document.querySelectorAll('.btn').forEach(button => {
                     if (button.id === 'soundToggle') return; 
                     button.addEventListener('mousedown', (event) => {
-                        audio.playClick();
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
                         const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
                         effects.createShatter(event.clientX, event.clientY, shatterColor);
+                        audio.playClick();
                     });
                 });
                 
-                // Cell sounds on mousedown
                 dom.gameBoard.addEventListener('mousedown', (e) => {
                     if (e.target.matches('.cell:not(.x):not(.o)')) {
                         audio.playClick();
                     }
                 });
 
-                // Standard 'click' events for game logic (happens after mousedown)
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
