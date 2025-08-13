@@ -1,54 +1,46 @@
 {
   "name": "Tic Tac Toe Pro",
   "short_name": "TicTacToe",
-  "start_url": ".",
+  "description": "A classic Tic Tac Toe game with a stunning neon theme. Play against a smart AI or challenge a friend.",
+  "lang": "en-US",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0d0221",
   "theme_color": "#ff00ff",
   "orientation": "portrait-primary",
-  "description": "A classic Tic Tac Toe game with a stunning neon theme. Play against a smart AI or challenge a friend.",
-  "lang": "en-US",
-  "dir": "ltr",
-  "scope": "/tic-tac-toe-Pro/",
-  "id": "com.aniflowtech.tictactoepro",
-  "iarc_rating_id": "e84b072d-4522-43b2-9896-787315133682",
-  "categories": [
-    "games",
-    "board_game",
-    "strategy"
-  ],
-  "prefer_related_applications": false,
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
   "icons": [
     {
-      "src": "icon-192x192.png",
+      "src": "icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "icon-512x512.png",
+      "src": "icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "screenshot1.png",
+      "src": "screenshots/screenshot1.png",
       "sizes": "540x720",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Game Board"
     },
     {
-      "src": "screenshot2.png",
+      "src": "screenshots/screenshot2.png",
       "sizes": "540x720",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Main Menu"
     }
+  ],
+  "categories": [
+    "games",
+    "board_game",
+    "strategy"
   ]
 }
-
-
