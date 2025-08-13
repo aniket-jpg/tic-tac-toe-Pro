@@ -202,8 +202,10 @@
                 }
             };
             
-            // --- REFINED SOUND SYSTEM WITH INSTANT MASTER CONTROL ---
+            // --- CORRECTED SOUND SYSTEM ---
             const audio = {
+                targetVolume: 0.3,
+                fadeInterval: null,
                 hasInteracted: false,
 
                 _handleFirstInteraction() {
@@ -224,27 +226,44 @@
                     dom.sounds.win.play().catch(()=>{});
                 },
 
-                updateMusicState() {
+                _fadeInMusic() {
                     if (!this.hasInteracted) return;
-                    const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
                     const music = dom.sounds.bgMusic;
-
-                    if (state.soundOn && !isGameScreenActive) {
-                        if (music.paused) {
-                            music.play().catch(e => console.error("Music playback failed", e));
-                        }
-                    } else {
-                        if (!music.paused) {
-                            music.pause();
-                        }
+                    if (this.fadeInterval || !music.paused) return; 
+                    music.volume = 0;
+                    const promise = music.play();
+                    if (promise !== undefined) {
+                        promise.then(() => {
+                            this.fadeInterval = setInterval(() => {
+                                let newVolume = music.volume + 0.05;
+                                if (newVolume >= this.targetVolume) {
+                                    music.volume = this.targetVolume;
+                                    clearInterval(this.fadeInterval); this.fadeInterval = null;
+                                } else { music.volume = newVolume; }
+                            }, 100);
+                        }).catch(error => {
+                            console.error("BG Music playback failed:", error);
+                            this.hasInteracted = false; 
+                        });
                     }
                 },
 
-                stopAllSounds() {
-                    for (const key in dom.sounds) {
-                        const sound = dom.sounds[key];
-                        sound.pause();
-                        sound.currentTime = 0;
+                // This function now stops the music instantly, without fading.
+                _pauseMusicInstantly() {
+                    clearInterval(this.fadeInterval); 
+                    this.fadeInterval = null;
+                    const music = dom.sounds.bgMusic;
+                    if (!music.paused) {
+                        music.pause();
+                    }
+                },
+
+                updateMusicState() {
+                    const isGameScreenActive = document.getElementById('gameScreen').classList.contains('active');
+                    if (state.soundOn && !isGameScreenActive) {
+                        this._fadeInMusic();
+                    } else {
+                        this._pauseMusicInstantly();
                     }
                 }
             };
@@ -258,7 +277,6 @@
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
-                    // Every time the view changes, this function decides if music should play or stop.
                     audio.updateMusicState();
 
                     let backTarget = null; let isGameScreen = false;
@@ -416,18 +434,22 @@
                 document.body.addEventListener('click', () => audio._handleFirstInteraction(), { once: true });
                 document.body.addEventListener('touchend', () => audio._handleFirstInteraction(), { once: true });
 
-                // --- Sound Toggle Logic with INSTANT MASTER CONTROL ---
+                // --- Sound Toggle Logic with INSTANT STOP ---
                 dom.buttons.soundToggle.addEventListener('mousedown', () => {
-                    state.soundOn = !state.soundOn; 
+                    state.soundOn = !state.soundOn; // Toggle the state
                     dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
 
                     if (state.soundOn) {
-                        // Turning sound ON: Play a click for feedback and update music.
+                        // Turning sound ON
                         audio.playClick();
                         audio.updateMusicState();
                     } else {
-                        // Turning sound OFF: Stop everything instantly.
-                        audio.stopAllSounds();
+                        // Turning sound OFF: Instantly stop and reset all sounds.
+                        for (const key in dom.sounds) {
+                            const sound = dom.sounds[key];
+                            sound.pause();
+                            sound.currentTime = 0;
+                        }
                     }
                 });
                 
@@ -449,7 +471,7 @@
                     }
                 });
 
-                // Standard 'click' events for game logic
+                // Standard 'click' events for game logic (happens after mousedown)
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
@@ -463,10 +485,7 @@
                     ui.toggleOverlay(dom.overlays.exitConfirmation, false);
                     ui.showView(dom.buttons.universalBack.dataset.target);
                 });
-                dom.buttons.restart.addEventListener('click', () => {
-                    audio.playClick();
-                    game.start();
-                });
+                dom.buttons.restart.addEventListener('click', () => game.start());
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
             }
 
