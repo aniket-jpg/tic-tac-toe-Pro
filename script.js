@@ -148,8 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         flashScore(winner) {
             const scoreSpan = document.getElementById(`score-${winner}`);
-            scoreSpan.classList.add('updated');
-            setTimeout(() => scoreSpan.classList.remove('updated'), 400);
+            if (scoreSpan) {
+                scoreSpan.classList.add('updated');
+                setTimeout(() => scoreSpan.classList.remove('updated'), 400);
+            }
         },
         drawWinningLine(winningItem) {
             const boardRect = dom.gameBoard.getBoundingClientRect();
@@ -186,7 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.gameBoard.style.pointerEvents = 'auto';
             ui.update();
             ui.announce(`New game started. X's turn.`);
-            if (state.gameMode === 'pvc' && state.playerMark === O_CLASS) this.triggerAIMove();
+            if (state.gameMode === 'pvc' && state.playerMark === O_CLASS) {
+                this.triggerAIMove();
+            }
         },
         handleCellClick(e) {
             if (!e.target.matches('[data-cell-index]')) return;
@@ -197,7 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.placeMark(index, currentClass);
             ui.announce(`${currentClass.toUpperCase()} placed in cell ${index + 1}`);
             if (this.processMove(currentClass)) return;
-            if (state.gameMode === 'pvc') this.triggerAIMove();
+            if (state.gameMode === 'pvc') {
+                this.triggerAIMove();
+            }
         },
         placeMark(index, currentClass) {
             state.board[index] = currentClass;
@@ -217,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         triggerAIMove() {
             ui.toggleOverlay(dom.overlays.aiThinking, true);
-            // FASTER AI: Reduced delay for more robust feel
             setTimeout(() => { 
                 ai.move(); 
                 ui.toggleOverlay(dom.overlays.aiThinking, false);
@@ -233,7 +238,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.flashScore(winner);
                 ui.drawWinningLine(winningCombination);
             }
-            if (state.gameMode === 'pvc') state.gamesPlayed++;
+            if (state.gameMode === 'pvc') {
+                state.gamesPlayed++;
+            }
             setTimeout(() => ui.showEndGameMessage(draw), winningCombination ? 800 : 100);
         },
         checkWin: (player, board = state.board) => WINNING_COMBINATIONS.find(item => item.combo.every(index => board[index] === player)),
@@ -244,53 +251,120 @@ document.addEventListener('DOMContentLoaded', () => {
     const ai = {
         move() {
             if (!state.isGameActive) return;
+            // Easy difficulty: make a random valid move
             if (state.difficulty === 'easy') {
                 const emptyCells = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
-                const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                game.placeMark(randomIndex, state.aiMark);
-                this.announceMove(randomIndex); game.processMove(state.aiMark); return;
+                if (emptyCells.length > 0) {
+                    const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    game.placeMark(randomIndex, state.aiMark);
+                    this.announceMove(randomIndex);
+                    game.processMove(state.aiMark);
+                }
+                return;
             }
+
+            // Hard difficulty: use minimax with occasional "mistakes"
             const isMistakeTime = state.gamesPlayed >= state.nextMistakeGame;
+            
+            // 1. Check if AI can win in the next move
             const aiWinningMove = this.findWinningMove(state.aiMark);
-            if (aiWinningMove !== null) { game.placeMark(aiWinningMove, state.aiMark); this.announceMove(aiWinningMove); game.processMove(state.aiMark); return; }
+            if (aiWinningMove !== null) {
+                game.placeMark(aiWinningMove, state.aiMark);
+                this.announceMove(aiWinningMove);
+                game.processMove(state.aiMark);
+                return;
+            }
+            
+            // 2. Check if player can win in the next move, and block them
             const playerWinningMove = this.findWinningMove(state.playerMark);
             if (playerWinningMove !== null) {
+                // If it's time to make a mistake, don't block perfectly
                 if (isMistakeTime) {
                     const alternativeMove = this.findPlausibleAlternativeMove(playerWinningMove);
-                    game.placeMark(alternativeMove, state.aiMark); this.announceMove(alternativeMove);
+                    game.placeMark(alternativeMove, state.aiMark);
+                    this.announceMove(alternativeMove);
+                    // Reset the mistake counter for the next cycle
                     state.nextMistakeGame = state.gamesPlayed + Math.floor(Math.random() * 3) + 3;
-                } else { game.placeMark(playerWinningMove, state.aiMark); this.announceMove(playerWinningMove); }
-                game.processMove(state.aiMark); return;
+                } else {
+                    // Block the player's winning move
+                    game.placeMark(playerWinningMove, state.aiMark);
+                    this.announceMove(playerWinningMove);
+                }
+                game.processMove(state.aiMark);
+                return;
             }
+            
+            // 3. If neither can win, use minimax to find the optimal move
             const bestMove = this.minimax(state.board, state.aiMark).index;
-            game.placeMark(bestMove, state.aiMark); this.announceMove(bestMove); game.processMove(state.aiMark);
+            game.placeMark(bestMove, state.aiMark);
+            this.announceMove(bestMove);
+            game.processMove(state.aiMark);
         },
         announceMove: (index) => ui.announce(`AI placed ${state.aiMark.toUpperCase()} in cell ${index + 1}`),
+        
         findWinningMove(player) {
             for (let i = 0; i < 9; i++) {
                 if (state.board[i] === null) {
-                    const tempBoard = [...state.board]; tempBoard[i] = player;
-                    if (game.checkWin(player, tempBoard)) return i;
+                    const tempBoard = [...state.board];
+                    tempBoard[i] = player;
+                    if (game.checkWin(player, tempBoard)) {
+                        return i;
+                    }
                 }
             }
             return null;
         },
+        
         findPlausibleAlternativeMove(blockingMoveIndex) {
             const availableSpots = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
             const alternatives = availableSpots.filter(index => index !== blockingMoveIndex);
+            // Return a random alternative if available, otherwise return the original blocking move
             return alternatives.length > 0 ? alternatives[Math.floor(Math.random() * alternatives.length)] : blockingMoveIndex;
         },
+
         minimax(newBoard, player) {
             const availableSpots = newBoard.map((v, i) => v === null ? i : null).filter(v => v !== null);
+
             if (game.checkWin(state.playerMark, newBoard)) return { score: -10 };
             if (game.checkWin(state.aiMark, newBoard)) return { score: 10 };
             if (availableSpots.length === 0) return { score: 0 };
-            const moves = availableSpots.map(index => {
-                const move = { index }; newBoard[index] = player;
-                move.score = this.minimax(newBoard, player === state.aiMark ? state.playerMark : state.aiMark).score;
-                newBoard[index] = null; return move;
-            });
-            return player === state.aiMark ? moves.reduce((a, b) => a.score > b.score ? a : b) : moves.reduce((a, b) => a.score < b.score ? a : b);
+
+            const moves = [];
+            for (let i = 0; i < availableSpots.length; i++) {
+                const move = {};
+                move.index = availableSpots[i];
+                newBoard[availableSpots[i]] = player;
+
+                if (player === state.aiMark) {
+                    const result = this.minimax(newBoard, state.playerMark);
+                    move.score = result.score;
+                } else {
+                    const result = this.minimax(newBoard, state.aiMark);
+                    move.score = result.score;
+                }
+                newBoard[availableSpots[i]] = null;
+                moves.push(move);
+            }
+
+            let bestMove;
+            if (player === state.aiMark) {
+                let bestScore = -10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score > bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = moves[i];
+                    }
+                }
+            } else {
+                let bestScore = 10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score < bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = moves[i];
+                    }
+                }
+            }
+            return bestMove;
         }
     };
 
@@ -298,11 +372,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
         dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('symbolSelection'); });
+        
         dom.buttons.symbolChoices.forEach(btn => btn.addEventListener('click', (e) => {
             state.playerMark = e.target.dataset.symbol;
             state.aiMark = state.playerMark === X_CLASS ? O_CLASS : X_CLASS;
             ui.showView('difficultySelection');
         }));
+
         [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
             state.difficulty = e.target.dataset.difficulty;
             ui.showView('gameScreen');
@@ -331,4 +407,26 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
 
         document.querySelectorAll('.btn').forEach(button => {
-            button.addEventListener('click', (e).
+            button.addEventListener('click', (e) => {
+                const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
+                const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+                effects.createShatter(e.clientX, e.clientY, shatterColor);
+            });
+        });
+
+        // Register Service Worker for PWA capabilities
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    }
+
+    // --- INITIALIZATION ---
+    setupEventListeners();
+    ui.showView('mainMenu');
+});
