@@ -54,7 +54,7 @@
         #shatter-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
         .shard { position: absolute; transform-origin: center; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); animation: shatter 0.7s ease-out forwards; }
         @keyframes shatter { 0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0); opacity: 0; } }
-        .game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
         .score-display, .turn-display { font-size: 1.5rem; padding: 5px 15px; border-radius: 8px; }
         .score-display { text-shadow: 0 0 5px var(--text-color); }
         .score-display .score { display: inline-block; transition: transform 0.3s var(--fast-bezier); }
@@ -97,10 +97,18 @@
     </style>
 </head>
 <body>
+    <!-- Sound Elements -->
+    <audio id="bgMusic" src="sounds/bg-music.mp3" loop></audio>
+    <audio id="clickSound" src="sounds/click.mp3"></audio>
+    <audio id="winSound" src="sounds/win.mp3"></audio>
+
     <div id="aria-live-region" class="sr-only" aria-live="polite"></div>
     <div id="shatter-container"></div>
     <div class="app-container">
+        <!-- Universal Buttons: Moved by JavaScript -->
+        <button id="musicToggle" class="btn btn-secondary">🔊 Music On</button>
         <button id="universalBackButton" class="btn btn-secondary" style="display: none;" aria-label="Go back">Back</button>
+
         <div id="mainMenu" class="view active">
             <h1>Pro Tic Tac Toe</h1>
             <button id="pvcButton" class="btn btn-primary">Player vs AI</button>
@@ -156,23 +164,24 @@
                 winningMessageText: document.getElementById('winningMessage-text'),
                 winningLine: { svg: document.getElementById('winning-line'), line: document.querySelector('#winning-line .line') },
                 displays: { score: document.getElementById('score-display'), turn: document.getElementById('turn-display') },
+                sounds: { bgMusic: document.getElementById('bgMusic'), click: document.getElementById('clickSound'), win: document.getElementById('winSound') },
                 buttons: {
                     pvc: document.getElementById('pvcButton'), pvp: document.getElementById('pvpButton'),
                     easy: document.getElementById('easyButton'), hard: document.getElementById('hardButton'),
                     restart: document.getElementById('restartButton'), universalBack: document.getElementById('universalBackButton'),
-                    confirmExit: document.getElementById('confirmExitButton'), cancelExit: document.getElementById('cancelExitButton')
+                    confirmExit: document.getElementById('confirmExitButton'), cancelExit: document.getElementById('cancelExitButton'),
+                    musicToggle: document.getElementById('musicToggle')
                 },
                 ariaLiveRegion: document.getElementById('aria-live-region')
             };
             const state = {
-                gameMode: 'pvp', difficulty: 'hard',
-                playerMark: X_CLASS, aiMark: O_CLASS, 
-                isPlayerTurnToStart: true, isOTurn: false,
-                board: Array(9).fill(null),
-                score: { player: 0, ai: 0 },
-                isGameActive: false
+                gameMode: 'pvp', difficulty: 'hard', playerMark: X_CLASS, aiMark: O_CLASS, 
+                isPlayerTurnToStart: true, isOTurn: false, board: Array(9).fill(null),
+                score: { player: 0, ai: 0 }, isGameActive: false, musicPlaying: true
             };
             const effects = {
+                playClickSound() { dom.sounds.click.currentTime = 0; dom.sounds.click.play().catch(()=>{}); },
+                playWinSound() { dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); },
                 createShatter(x, y, color) {
                     const container = document.getElementById('shatter-container');
                     for (let i = 0; i < 15; i++) {
@@ -193,9 +202,17 @@
                 toggleOverlay: (overlay, show) => overlay.classList.toggle('active', show),
                 showView(viewId) {
                     const backButton = dom.buttons.universalBack;
+                    const musicButton = dom.buttons.musicToggle;
                     const activeView = document.getElementById(viewId);
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
+
+                    if (viewId === 'gameScreen') {
+                        dom.sounds.bgMusic.pause();
+                    } else if (state.musicPlaying) {
+                        dom.sounds.bgMusic.play().catch(()=>{});
+                    }
+
                     let backTarget = null; let isGameScreen = false;
                     switch (viewId) {
                         case 'mainMenu': state.score = { player: 0, ai: 0 }; state.isPlayerTurnToStart = true; break;
@@ -207,6 +224,15 @@
                         backButton.classList.toggle('btn-header', isGameScreen);
                         if (isGameScreen) { document.querySelector('.game-header').prepend(backButton); } else { activeView.appendChild(backButton); }
                     } else { backButton.style.display = 'none'; }
+
+                    if (viewId === 'mainMenu') {
+                        musicButton.style.display = 'block'; activeView.appendChild(musicButton); musicButton.classList.remove('btn-header');
+                    } else if (isGameScreen) {
+                        musicButton.style.display = 'block'; document.querySelector('.game-header').appendChild(musicButton); musicButton.classList.add('btn-header');
+                    } else if (viewId === 'difficultySelection') {
+                        musicButton.style.display = 'block'; activeView.appendChild(musicButton); musicButton.classList.remove('btn-header');
+                    }
+                    else { musicButton.style.display = 'none'; }
                 },
                 update() { this.updateBoard(); this.updateTurnIndicator(); this.updateScoreDisplay(); },
                 updateBoard() { dom.cellElements.forEach((cell, index) => { cell.className = 'cell'; if (state.board[index]) cell.classList.add(state.board[index]); }); },
@@ -216,7 +242,7 @@
                     dom.displays.turn.className = `turn-display ${currentClass}`; dom.gameBoard.className = `turn-${currentClass}`;
                 },
                 updateScoreDisplay() { dom.displays.score.innerHTML = `You: <span class="score">${state.score.player}</span> | AI: <span class="score">${state.score.ai}</span>`; },
-                flashScore(winner) { const scoreSpans = dom.displays.score.querySelectorAll('.score'); if(winner === state.playerMark) { scoreSpans[0].classList.add('updated'); } else { scoreSpans[1].classList.add('updated'); } setTimeout(() => { scoreSpans[0].classList.remove('updated'); scoreSpans[1].classList.remove('updated'); }, 400); },
+                flashScore(winnerMark) { const scoreSpans = dom.displays.score.querySelectorAll('.score'); if(winnerMark === state.playerMark) { scoreSpans[0].classList.add('updated'); } else { scoreSpans[1].classList.add('updated'); } setTimeout(() => { scoreSpans[0].classList.remove('updated'); scoreSpans[1].classList.remove('updated'); }, 400); },
                 drawWinningLine(winningItem) {
                     const boardRect = dom.gameBoard.getBoundingClientRect(); const cellSize = boardRect.width / 3; const halfCell = cellSize / 2;
                     const coords = {
@@ -242,16 +268,13 @@
                     state.isGameActive = true; state.isOTurn = false; state.board.fill(null);
                     ui.toggleOverlay(dom.overlays.winning, false); dom.winningLine.svg.style.visibility = 'hidden';
                     dom.gameBoard.style.pointerEvents = 'auto';
-                    if (state.isPlayerTurnToStart) {
-                        state.playerMark = X_CLASS; state.aiMark = O_CLASS;
-                    } else {
-                        state.playerMark = O_CLASS; state.aiMark = X_CLASS;
-                    }
-                    ui.update();
-                    ui.announce(`New game started. ${state.isPlayerTurnToStart ? 'Your' : `AI's`} turn as X.`);
+                    if (state.isPlayerTurnToStart) { state.playerMark = X_CLASS; state.aiMark = O_CLASS; }
+                    else { state.playerMark = O_CLASS; state.aiMark = X_CLASS; }
+                    ui.update(); ui.announce(`New game started. ${state.isPlayerTurnToStart ? 'Your' : `AI's`} turn as X.`);
                     if (!state.isPlayerTurnToStart) this.triggerAIMove();
                 },
                 handleCellClick(e) {
+                    effects.playClickSound();
                     if (!e.target.matches('[data-cell-index]')) return;
                     const index = parseInt(e.target.dataset.cellIndex);
                     if (!state.isGameActive || state.board[index] !== null) return;
@@ -277,10 +300,11 @@
                     state.isGameActive = false; dom.gameBoard.style.pointerEvents = 'none';
                     if (!draw) {
                         const winnerMark = state.isOTurn ? O_CLASS : X_CLASS;
-                        if(winnerMark === state.playerMark) state.score.player++; else state.score.ai++;
+                        if(winnerMark === state.playerMark) { state.score.player++; effects.playWinSound(); }
+                        else { state.score.ai++; }
                         ui.updateScoreDisplay(); ui.flashScore(winnerMark); ui.drawWinningLine(winningCombination);
                     }
-                    state.isPlayerTurnToStart = !state.isPlayerTurnToStart; // Alternate who starts next game.
+                    state.isPlayerTurnToStart = !state.isPlayerTurnToStart;
                     setTimeout(() => ui.showEndGameMessage(draw), winningCombination ? 800 : 100);
                 },
                 checkWin: (player, board = state.board) => WINNING_COMBINATIONS.find(item => item.combo.every(index => board[index] === player)),
@@ -292,56 +316,37 @@
                     const availableSpots = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
                     if (state.difficulty === 'easy') {
                         const randomIndex = availableSpots[Math.floor(Math.random() * availableSpots.length)];
-                        game.placeMark(randomIndex, state.aiMark); this.announceMove(randomIndex); game.processMove(state.aiMark);
-                        return;
+                        game.placeMark(randomIndex, state.aiMark); this.announceMove(randomIndex); game.processMove(state.aiMark); return;
                     }
-                    // --- NEW "HUMAN-LIKE" HARD AI ---
-                    // 1. Opening Book: If AI is first, pick a random strong opening move.
                     if (availableSpots.length === 9) {
-                        const openingMoves = [4, 0, 2, 6, 8]; // Center and corners
+                        const openingMoves = [4, 0, 2, 6, 8];
                         const randomMove = openingMoves[Math.floor(Math.random() * openingMoves.length)];
-                        game.placeMark(randomMove, state.aiMark); this.announceMove(randomMove); game.processMove(state.aiMark);
-                        return;
+                        game.placeMark(randomMove, state.aiMark); this.announceMove(randomMove); game.processMove(state.aiMark); return;
                     }
-                    // 2. Find all possible winning moves for AI and Player.
                     const aiWinMoves = this.findAllWinningMoves(state.aiMark);
                     if (aiWinMoves.length > 0) {
                         const randomWinMove = aiWinMoves[Math.floor(Math.random() * aiWinMoves.length)];
-                        game.placeMark(randomWinMove, state.aiMark); this.announceMove(randomWinMove); game.processMove(state.aiMark);
-                        return;
+                        game.placeMark(randomWinMove, state.aiMark); this.announceMove(randomWinMove); game.processMove(state.aiMark); return;
                     }
                     const playerWinMoves = this.findAllWinningMoves(state.playerMark);
                     if (playerWinMoves.length > 0) {
                         const randomBlockMove = playerWinMoves[Math.floor(Math.random() * playerWinMoves.length)];
-                        game.placeMark(randomBlockMove, state.aiMark); this.announceMove(randomBlockMove); game.processMove(state.aiMark);
-                        return;
+                        game.placeMark(randomBlockMove, state.aiMark); this.announceMove(randomBlockMove); game.processMove(state.aiMark); return;
                     }
-                    // 3. Use Minimax to get a sorted list of best-to-worst moves.
                     const sortedMoves = this.minimax([...state.board], state.aiMark);
-                    // 4. Decide which move to play based on a "human error" model.
                     const personality = Math.random();
                     let chosenMove;
-                    if (personality < 0.70 && sortedMoves.length > 0) { // 70% chance of playing the best move
-                        chosenMove = sortedMoves[0];
-                    } else if (personality < 0.95 && sortedMoves.length > 1) { // 25% chance of playing the 2nd best move
-                        chosenMove = sortedMoves[1];
-                    } else if (sortedMoves.length > 2) { // 5% chance of playing the 3rd best move
-                        chosenMove = sortedMoves[2];
-                    } else { // Fallback to the best move if not enough options
-                        chosenMove = sortedMoves[0];
-                    }
+                    if (personality < 0.70 && sortedMoves.length > 0) { chosenMove = sortedMoves[0]; }
+                    else if (personality < 0.95 && sortedMoves.length > 1) { chosenMove = sortedMoves[1]; }
+                    else if (sortedMoves.length > 2) { chosenMove = sortedMoves[2]; }
+                    else { chosenMove = sortedMoves[0]; }
                     game.placeMark(chosenMove.index, state.aiMark); this.announceMove(chosenMove.index);
                     game.processMove(state.aiMark);
                 },
                 announceMove: (index) => ui.announce(`AI placed ${state.aiMark.toUpperCase()} in cell ${index + 1}`),
                 findAllWinningMoves(player) {
                     const moves = [];
-                    for (let i = 0; i < 9; i++) {
-                        if (state.board[i] === null) {
-                            const tempBoard = [...state.board]; tempBoard[i] = player;
-                            if (game.checkWin(player, tempBoard)) moves.push(i);
-                        }
-                    }
+                    for (let i = 0; i < 9; i++) { if (state.board[i] === null) { const tempBoard = [...state.board]; tempBoard[i] = player; if (game.checkWin(player, tempBoard)) moves.push(i); } }
                     return moves;
                 },
                 minimax(newBoard, player) {
@@ -362,26 +367,33 @@
                 }
             };
             function setupEventListeners() {
-                dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
-                dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
+                document.body.addEventListener('click', () => {
+                    if (state.musicPlaying) dom.sounds.bgMusic.play().catch(()=>{});
+                }, { once: true });
+                dom.buttons.musicToggle.addEventListener('click', () => {
+                    effects.playClickSound();
+                    state.musicPlaying = !state.musicPlaying;
+                    if (state.musicPlaying) { dom.sounds.bgMusic.play().catch(()=>{}); dom.buttons.musicToggle.textContent = "🔊 Music On"; }
+                    else { dom.sounds.bgMusic.pause(); dom.buttons.musicToggle.textContent = "🔇 Music Off"; }
+                });
+
+                dom.buttons.pvp.addEventListener('click', () => { effects.playClickSound(); state.gameMode = 'pvp'; ui.showView('gameScreen'); });
+                dom.buttons.pvc.addEventListener('click', () => { effects.playClickSound(); state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
-                    state.difficulty = e.target.dataset.difficulty;
+                    effects.playClickSound(); state.difficulty = e.target.dataset.difficulty;
                     ui.showView('gameScreen');
                 }));
                 dom.buttons.universalBack.addEventListener('click', (e) => {
-                    const targetViewId = e.target.dataset.target;
-                    if (state.isGameActive && document.getElementById('gameScreen').classList.contains('active')) {
-                        dom.overlays.exitConfirmation.dataset.target = targetViewId;
-                        ui.toggleOverlay(dom.overlays.exitConfirmation, true);
-                    } else { ui.showView(targetViewId); }
+                    effects.playClickSound();
+                    ui.toggleOverlay(dom.overlays.exitConfirmation, true);
                 });
-                dom.buttons.cancelExit.addEventListener('click', () => ui.toggleOverlay(dom.overlays.exitConfirmation, false));
+                dom.buttons.cancelExit.addEventListener('click', () => { effects.playClickSound(); ui.toggleOverlay(dom.overlays.exitConfirmation, false); });
                 dom.buttons.confirmExit.addEventListener('click', () => {
-                    const targetViewId = dom.overlays.exitConfirmation.dataset.target;
-                    state.isGameActive = false; ui.toggleOverlay(dom.overlays.exitConfirmation, false);
-                    ui.showView(targetViewId);
+                    effects.playClickSound(); state.isGameActive = false;
+                    ui.toggleOverlay(dom.overlays.exitConfirmation, false);
+                    ui.showView(dom.buttons.universalBack.dataset.target);
                 });
-                dom.buttons.restart.addEventListener('click', () => game.start());
+                dom.buttons.restart.addEventListener('click', () => { effects.playClickSound(); game.start(); });
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
                 document.querySelectorAll('.btn').forEach(button => {
                     button.addEventListener('click', (e) => {
