@@ -251,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ai = {
         move() {
             if (!state.isGameActive) return;
+
             // Easy difficulty: make a random valid move
             if (state.difficulty === 'easy') {
                 const emptyCells = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
@@ -278,15 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Check if player can win in the next move, and block them
             const playerWinningMove = this.findWinningMove(state.playerMark);
             if (playerWinningMove !== null) {
-                // If it's time to make a mistake, don't block perfectly
                 if (isMistakeTime) {
                     const alternativeMove = this.findPlausibleAlternativeMove(playerWinningMove);
                     game.placeMark(alternativeMove, state.aiMark);
                     this.announceMove(alternativeMove);
-                    // Reset the mistake counter for the next cycle
                     state.nextMistakeGame = state.gamesPlayed + Math.floor(Math.random() * 3) + 3;
                 } else {
-                    // Block the player's winning move
                     game.placeMark(playerWinningMove, state.aiMark);
                     this.announceMove(playerWinningMove);
                 }
@@ -295,7 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // 3. If neither can win, use minimax to find the optimal move
-            const bestMove = this.minimax(state.board, state.aiMark).index;
+            // We pass a *copy* of the board to prevent the original from being changed
+            const bestMove = this.minimax([...state.board], state.aiMark).index;
             game.placeMark(bestMove, state.aiMark);
             this.announceMove(bestMove);
             game.processMove(state.aiMark);
@@ -318,23 +317,34 @@ document.addEventListener('DOMContentLoaded', () => {
         findPlausibleAlternativeMove(blockingMoveIndex) {
             const availableSpots = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
             const alternatives = availableSpots.filter(index => index !== blockingMoveIndex);
-            // Return a random alternative if available, otherwise return the original blocking move
             return alternatives.length > 0 ? alternatives[Math.floor(Math.random() * alternatives.length)] : blockingMoveIndex;
         },
 
+        // --- CORRECTED MINIMAX FUNCTION ---
         minimax(newBoard, player) {
             const availableSpots = newBoard.map((v, i) => v === null ? i : null).filter(v => v !== null);
 
-            if (game.checkWin(state.playerMark, newBoard)) return { score: -10 };
-            if (game.checkWin(state.aiMark, newBoard)) return { score: 10 };
-            if (availableSpots.length === 0) return { score: 0 };
+            // Base cases: check for a terminal state (win, loss, draw)
+            if (game.checkWin(state.playerMark, newBoard)) {
+                return { score: -10 };
+            }
+            if (game.checkWin(state.aiMark, newBoard)) {
+                return { score: 10 };
+            }
+            if (availableSpots.length === 0) {
+                return { score: 0 };
+            }
 
+            // Loop through all possible moves
             const moves = [];
             for (let i = 0; i < availableSpots.length; i++) {
                 const move = {};
                 move.index = availableSpots[i];
+                
+                // Make the move for the current player
                 newBoard[availableSpots[i]] = player;
 
+                // Recursively call minimax for the other player
                 if (player === state.aiMark) {
                     const result = this.minimax(newBoard, state.playerMark);
                     move.score = result.score;
@@ -342,10 +352,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const result = this.minimax(newBoard, state.aiMark);
                     move.score = result.score;
                 }
+
+                // Reset the board to its previous state (backtrack)
                 newBoard[availableSpots[i]] = null;
                 moves.push(move);
             }
 
+            // Find the best move from the array of possible moves
             let bestMove;
             if (player === state.aiMark) {
                 let bestScore = -10000;
@@ -414,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Register Service Worker for PWA capabilities
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js').then(registration => {
