@@ -1,16 +1,15 @@
-const CACHE_NAME = "neon-tic-tac-toe-cache-v1";
+const CACHE_NAME = "neon-tic-tac-toe-cache-v4"; // Updated cache version
 const FILES_TO_CACHE = [
   '/',
   'index.html',
-  'style.css',
-  'script.js',
-  'manifest.json',
-  'https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap',
-  'icons/icon-512x512.png',
-  'icons/icon-192x192.png'
+  'sounds/bg-music.mp3',
+  'sounds/click.mp3',
+  'sounds/win.mp3', // Added the new win sound
+  // Add paths to your icons if you have them, e.g.:
+  // 'icons/icon-512x512.png',
+  // 'icons/icon-192x192.png'
 ];
 
-// On install, cache the core application files
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -21,21 +20,14 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// On fetch, serve from cache first, then network
 self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // If the request is in the cache, return it
-      if (response) {
-        return response;
-      }
-      // Otherwise, fetch from the network
-      return fetch(event.request);
+      return response || fetch(event.request);
     })
   );
 });
 
-// On activate, clean up old caches
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
