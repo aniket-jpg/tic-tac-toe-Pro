@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <base target="_top">
-    <title>Tic Tac Toe Pro</title>
+    <title>Neon Tic Tac Toe Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -106,7 +106,7 @@
     <div id="shatter-container"></div>
     <div class="app-container">
         <!-- Universal Buttons: Moved by JavaScript -->
-        <button id="musicToggle" class="btn btn-secondary">🔊 Music On</button>
+        <button id="soundToggle" class="btn btn-secondary">🔊 Sound On</button>
         <button id="universalBackButton" class="btn btn-secondary" style="display: none;" aria-label="Go back">Back</button>
 
         <div id="mainMenu" class="view active">
@@ -170,22 +170,22 @@
                     easy: document.getElementById('easyButton'), hard: document.getElementById('hardButton'),
                     restart: document.getElementById('restartButton'), universalBack: document.getElementById('universalBackButton'),
                     confirmExit: document.getElementById('confirmExitButton'), cancelExit: document.getElementById('cancelExitButton'),
-                    musicToggle: document.getElementById('musicToggle')
+                    soundToggle: document.getElementById('soundToggle')
                 },
                 ariaLiveRegion: document.getElementById('aria-live-region')
             };
             const state = {
                 gameMode: 'pvp', difficulty: 'hard', playerMark: X_CLASS, aiMark: O_CLASS, 
                 isPlayerTurnToStart: true, isOTurn: false, board: Array(9).fill(null),
-                score: { player: 0, ai: 0 }, isGameActive: false, musicPlaying: true
+                score: { player: 0, ai: 0 }, isGameActive: false, soundOn: true
             };
             const audio = {
-                targetVolume: 0.4, // Background music volume (not too loud)
+                targetVolume: 0.3,
                 fadeInterval: null,
-                playClick() { dom.sounds.click.currentTime = 0; dom.sounds.click.play().catch(()=>{}); },
-                playWin() { if(state.musicPlaying) { dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); } },
+                playClick() { if (!state.soundOn) return; dom.sounds.click.currentTime = 0; dom.sounds.click.play().catch(()=>{}); },
+                playWin() { if (!state.soundOn) return; dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); },
                 fadeInMusic() {
-                    if (!state.musicPlaying || this.fadeInterval) return;
+                    if (!state.soundOn || this.fadeInterval || dom.sounds.bgMusic.volume > 0) return;
                     const music = dom.sounds.bgMusic;
                     music.volume = 0;
                     const promise = music.play();
@@ -195,32 +195,23 @@
                                 let newVolume = music.volume + 0.05;
                                 if (newVolume >= this.targetVolume) {
                                     music.volume = this.targetVolume;
-                                    clearInterval(this.fadeInterval);
-                                    this.fadeInterval = null;
-                                } else {
-                                    music.volume = newVolume;
-                                }
+                                    clearInterval(this.fadeInterval); this.fadeInterval = null;
+                                } else { music.volume = newVolume; }
                             }, 100);
-                        }).catch(error => {
-                            console.log("Autoplay blocked. Waiting for user interaction.");
-                            // If autoplay is blocked, we'll try again on the first click.
+                        }).catch(() => {
                             document.body.addEventListener('click', () => this.fadeInMusic(), { once: true });
                         });
                     }
                 },
                 pauseMusic() {
-                    clearInterval(this.fadeInterval);
-                    this.fadeInterval = null;
+                    clearInterval(this.fadeInterval); this.fadeInterval = null;
                     const music = dom.sounds.bgMusic;
+                    if(music.paused) return;
                     const fadeOutInterval = setInterval(() => {
                         let newVolume = music.volume - 0.05;
                         if (newVolume <= 0) {
-                            music.volume = 0;
-                            music.pause();
-                            clearInterval(fadeOutInterval);
-                        } else {
-                            music.volume = newVolume;
-                        }
+                            music.volume = 0; music.pause(); clearInterval(fadeOutInterval);
+                        } else { music.volume = newVolume; }
                     }, 50);
                 }
             };
@@ -228,16 +219,13 @@
                 toggleOverlay: (overlay, show) => overlay.classList.toggle('active', show),
                 showView(viewId) {
                     const backButton = dom.buttons.universalBack;
-                    const musicButton = dom.buttons.musicToggle;
+                    const soundButton = dom.buttons.soundToggle;
                     const activeView = document.getElementById(viewId);
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
 
-                    if (viewId === 'gameScreen') {
-                        audio.pauseMusic();
-                    } else {
-                        audio.fadeInMusic();
-                    }
+                    if (viewId === 'gameScreen') { audio.pauseMusic(); } 
+                    else if (state.soundOn) { audio.fadeInMusic(); }
 
                     let backTarget = null; let isGameScreen = false;
                     switch (viewId) {
@@ -252,11 +240,10 @@
                     } else { backButton.style.display = 'none'; }
                     
                     if (['mainMenu', 'difficultySelection'].includes(viewId)) {
-                        musicButton.style.display = 'block'; activeView.appendChild(musicButton); musicButton.classList.remove('btn-header');
+                        soundButton.style.display = 'block'; activeView.appendChild(soundButton); soundButton.classList.remove('btn-header');
                     } else if (isGameScreen) {
-                        musicButton.style.display = 'block'; document.querySelector('.game-header').appendChild(musicButton); musicButton.classList.add('btn-header');
-                    }
-                    else { musicButton.style.display = 'none'; }
+                        soundButton.style.display = 'block'; document.querySelector('.game-header').appendChild(soundButton); soundButton.classList.add('btn-header');
+                    } else { soundButton.style.display = 'none'; }
                 },
                 update() { this.updateBoard(); this.updateTurnIndicator(); this.updateScoreDisplay(); },
                 updateBoard() { dom.cellElements.forEach((cell, index) => { cell.className = 'cell'; if (state.board[index]) cell.classList.add(state.board[index]); }); },
@@ -391,35 +378,35 @@
                 }
             };
             function setupEventListeners() {
-                audio.fadeInMusic(); // Attempt to fade in music on load
-                dom.buttons.musicToggle.addEventListener('click', () => {
+                audio.fadeInMusic(); 
+                dom.buttons.soundToggle.addEventListener('click', () => {
                     audio.playClick();
-                    state.musicPlaying = !state.musicPlaying;
-                    if (state.musicPlaying) { audio.fadeInMusic(); dom.buttons.musicToggle.textContent = "🔊 Music On"; }
-                    else { audio.pauseMusic(); dom.buttons.musicToggle.textContent = "🔇 Music Off"; }
+                    state.soundOn = !state.soundOn;
+                    if (state.soundOn) { audio.fadeInMusic(); dom.buttons.soundToggle.textContent = "🔊 Sound On"; }
+                    else { audio.pauseMusic(); dom.buttons.soundToggle.textContent = "🔇 Sound Off"; }
                 });
 
-                dom.buttons.pvp.addEventListener('click', () => { audio.playClick(); state.gameMode = 'pvp'; ui.showView('gameScreen'); });
-                dom.buttons.pvc.addEventListener('click', () => { audio.playClick(); state.gameMode = 'pvc'; ui.showView('difficultySelection'); });
+                dom.buttons.pvp.addEventListener('click', () => { ui.showView('gameScreen'); });
+                dom.buttons.pvc.addEventListener('click', () => { ui.showView('difficultySelection'); });
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
-                    audio.playClick(); state.difficulty = e.target.dataset.difficulty;
+                    state.difficulty = e.target.dataset.difficulty;
                     ui.showView('gameScreen');
                 }));
-                dom.buttons.universalBack.addEventListener('click', (e) => {
-                    audio.playClick();
+                dom.buttons.universalBack.addEventListener('click', () => {
                     ui.toggleOverlay(dom.overlays.exitConfirmation, true);
                 });
-                dom.buttons.cancelExit.addEventListener('click', () => { audio.playClick(); ui.toggleOverlay(dom.overlays.exitConfirmation, false); });
+                dom.buttons.cancelExit.addEventListener('click', () => { ui.toggleOverlay(dom.overlays.exitConfirmation, false); });
                 dom.buttons.confirmExit.addEventListener('click', () => {
-                    audio.playClick(); state.isGameActive = false;
+                    state.isGameActive = false;
                     ui.toggleOverlay(dom.overlays.exitConfirmation, false);
                     ui.showView(dom.buttons.universalBack.dataset.target);
                 });
-                dom.buttons.restart.addEventListener('click', () => { audio.playClick(); game.start(); });
+                dom.buttons.restart.addEventListener('click', () => game.start());
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
+                
                 document.querySelectorAll('.btn').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        if(button.id !== 'musicToggle') audio.playClick();
+                        audio.playClick();
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
                         const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
                         effects.createShatter(e.clientX, e.clientY, shatterColor);
