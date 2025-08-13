@@ -30,12 +30,18 @@
             -moz-osx-font-smoothing: grayscale;
         }
         .app-container {
-            width: 100%; height: 100%; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; position: relative;
+            width: 100%; height: 100%; max-width: 500px;
+            margin: 0 auto;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 20px; box-sizing: border-box;
+            position: relative; 
         }
         .view {
-            width: 100%; height: 100%; display: none; flex-direction: column;
-            justify-content: center; align-items: center; text-align: center; animation: fadeIn 0.4s var(--fast-bezier);
+            width: 100%; height: 100%;
+            display: none; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center; animation: fadeIn 0.4s var(--fast-bezier);
         }
         .view.active { display: flex; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
@@ -50,23 +56,50 @@
             20%, 24%, 55% { text-shadow: none; }
         }
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        h1 { font-size: clamp(2.5rem, 10vw, 4rem); margin-bottom: 2rem; color: var(--text-color); animation: neonFlicker 5s infinite linear; }
+        h1 {
+            font-size: clamp(2.5rem, 10vw, 4rem); margin-bottom: 2rem;
+            color: var(--text-color);
+            animation: neonFlicker 5s infinite linear;
+        }
         .btn {
-            font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: clamp(1rem, 4vw, 1.2rem); padding: 16px 32px;
+            font-family: 'Orbitron', sans-serif; font-weight: 700;
+            font-size: clamp(1rem, 4vw, 1.2rem); padding: 16px 32px;
             margin: 10px; cursor: pointer; border-radius: 10px;
             transition: transform 0.2s var(--fast-bezier), box-shadow 0.2s var(--fast-bezier), background-color 0.2s var(--fast-bezier);
-            width: 80%; max-width: 300px; background: transparent; border: 2px solid; text-shadow: 0 0 8px;
-            box-shadow: inset 0 0 10px 0px, 0 0 10px 0px; position: relative; z-index: 1;
+            width: 80%; max-width: 300px;
+            background: transparent; border: 2px solid; text-shadow: 0 0 8px;
+            box-shadow: inset 0 0 10px 0px, 0 0 10px 0px;
+            position: relative;
+            z-index: 1;
         }
         .btn-primary { color: var(--color-x); border-color: var(--color-x); }
         .btn-primary:hover, .btn-primary:focus { color: var(--background-color); background-color: var(--color-x); box-shadow: 0 0 20px var(--color-x), 0 0 35px var(--color-x); transform: translateY(-4px) scale(1.02); outline: none; }
         .btn-secondary { color: var(--color-o); border-color: var(--color-o); }
         .btn-secondary:hover, .btn-secondary:focus { color: var(--background-color); background-color: var(--color-o); box-shadow: 0 0 20px var(--color-o), 0 0 35px var(--color-o); transform: translateY(-4px) scale(1.02); outline: none; }
-        .btn:active { transform: translateY(0px) scale(0.96); filter: brightness(1.1); }
-        .btn.btn-header { width: auto; padding: 8px 16px; font-size: 0.9rem; }
-        #shatter-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
-        .shard { position: absolute; transform-origin: center; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); animation: shatter 0.7s ease-out forwards; }
-        @keyframes shatter { 0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0); opacity: 0; } }
+        .btn:active {
+            transform: translateY(0px) scale(0.96);
+            filter: brightness(1.1);
+        }
+        .btn.btn-header {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        #shatter-container {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 9999;
+        }
+        .shard {
+            position: absolute;
+            transform-origin: center;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            animation: shatter 0.7s ease-out forwards;
+        }
+        @keyframes shatter {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0); opacity: 0; }
+        }
         .game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .score-display, .turn-display { font-size: 1.5rem; padding: 5px 15px; border-radius: 8px; }
         .score-display { text-shadow: 0 0 5px var(--text-color); }
@@ -98,12 +131,14 @@
         #winning-line .line { stroke-width: 8px; stroke-linecap: round; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: drawLine 0.8s ease-out forwards; }
         .overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--overlay-color);
-            backdrop-filter: blur(8px); display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
             opacity: 0; pointer-events: none; transform: scale(1.05);
-            transition: opacity 0.3s var(--fast-bezier), transform 0.3s var(--fast-bezier); z-index: 100;
+            transition: opacity 0.3s var(--fast-bezier), transform 0.3s var(--fast-bezier); 
+            z-index: 100;
         }
         .overlay.active { opacity: 1; pointer-events: all; transform: scale(1); }
-        .overlay-text { font-size: clamp(2rem, 8vw, 2.5rem); margin-bottom: 1.5rem; text-shadow: 0 0 10px #fff; }
+        .overlay-text { font-size: clamp(2rem, 8vw, 2.5rem); margin-bottom: 1.5rem; text-shadow: 0 0 10px #fff;}
         #winningMessage-text { font-size: clamp(3rem, 12vw, 5rem); text-shadow: 0 0 10px #fff, 0 0 40px var(--color-x); margin-bottom: 1rem; }
         #ai-thinking-text { font-size: 2rem; color: var(--color-o); text-shadow: 0 0 10px var(--color-o); }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
@@ -156,6 +191,7 @@
             <button id="cancelExitButton" class="btn btn-secondary">No, Stay</button>
         </div>
     </div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const X_CLASS = 'x';
@@ -169,21 +205,44 @@
                 views: document.querySelectorAll('.view'),
                 cellElements: document.querySelectorAll('[data-cell-index]'),
                 gameBoard: document.getElementById('gameBoard'),
-                overlays: { winning: document.getElementById('winningMessage'), aiThinking: document.getElementById('aiThinkingOverlay'), exitConfirmation: document.getElementById('exitConfirmationOverlay') },
+                overlays: {
+                    winning: document.getElementById('winningMessage'),
+                    aiThinking: document.getElementById('aiThinkingOverlay'),
+                    exitConfirmation: document.getElementById('exitConfirmationOverlay')
+                },
                 winningMessageText: document.getElementById('winningMessage-text'),
-                winningLine: { svg: document.getElementById('winning-line'), line: document.querySelector('#winning-line .line') },
-                displays: { score: document.getElementById('score-display'), turn: document.getElementById('turn-display') },
+                winningLine: {
+                    svg: document.getElementById('winning-line'),
+                    line: document.querySelector('#winning-line .line')
+                },
+                displays: {
+                    score: document.getElementById('score-display'),
+                    turn: document.getElementById('turn-display')
+                },
                 buttons: {
-                    pvc: document.getElementById('pvcButton'), pvp: document.getElementById('pvpButton'),
-                    symbolChoices: document.querySelectorAll('.symbol-choice'), easy: document.getElementById('easyButton'), hard: document.getElementById('hardButton'),
-                    restart: document.getElementById('restartButton'), universalBack: document.getElementById('universalBackButton'),
-                    confirmExit: document.getElementById('confirmExitButton'), cancelExit: document.getElementById('cancelExitButton')
+                    pvc: document.getElementById('pvcButton'),
+                    pvp: document.getElementById('pvpButton'),
+                    symbolChoices: document.querySelectorAll('.symbol-choice'),
+                    easy: document.getElementById('easyButton'),
+                    hard: document.getElementById('hardButton'),
+                    restart: document.getElementById('restartButton'),
+                    universalBack: document.getElementById('universalBackButton'),
+                    confirmExit: document.getElementById('confirmExitButton'),
+                    cancelExit: document.getElementById('cancelExitButton')
                 },
                 ariaLiveRegion: document.getElementById('aria-live-region')
             };
             const state = {
-                gameMode: 'pvp', difficulty: 'hard', playerMark: X_CLASS, aiMark: O_CLASS, isOTurn: false,
-                board: Array(9).fill(null), score: { x: 0, o: 0 }, isGameActive: false, gamesPlayed: 0, nextMistakeGame: 0
+                gameMode: 'pvp',
+                difficulty: 'hard',
+                playerMark: X_CLASS,
+                aiMark: O_CLASS,
+                isOTurn: false,
+                board: Array(9).fill(null),
+                score: { x: 0, o: 0 },
+                isGameActive: false,
+                gamesPlayed: 0,
+                nextMistakeGame: 0
             };
             const effects = {
                 createShatter(x, y, color) {
@@ -195,8 +254,11 @@
                         shard.style.setProperty('--tx', `${(Math.random() * 250 - 125)}px`);
                         shard.style.setProperty('--ty', `${(Math.random() * 250 - 125)}px`);
                         shard.style.setProperty('--rot', `${(Math.random() * 540 - 270)}deg`);
-                        shard.style.width = `${size}px`; shard.style.height = `${size}px`; shard.style.top = `${y}px`;
-                        shard.style.left = `${x}px`; shard.style.backgroundColor = color;
+                        shard.style.width = `${size}px`;
+                        shard.style.height = `${size}px`;
+                        shard.style.top = `${y}px`;
+                        shard.style.left = `${x}px`;
+                        shard.style.backgroundColor = color;
                         container.appendChild(shard);
                         setTimeout(() => shard.remove(), 700);
                     }
@@ -209,17 +271,23 @@
                     const activeView = document.getElementById(viewId);
                     dom.views.forEach(view => view.classList.remove('active'));
                     activeView.classList.add('active');
-                    let backTarget = null; let isGameScreen = false;
+                    let backTarget = null;
+                    let isGameScreen = false;
                     switch (viewId) {
-                        case 'mainMenu': state.score = { x: 0, o: 0 }; state.gamesPlayed = 0; state.nextMistakeGame = Math.floor(Math.random() * 3) + 3; break;
+                        case 'mainMenu':
+                            state.score = { x: 0, o: 0 }; state.gamesPlayed = 0; state.nextMistakeGame = Math.floor(Math.random() * 3) + 3;
+                            break;
                         case 'symbolSelection': backTarget = 'mainMenu'; break;
                         case 'difficultySelection': backTarget = 'symbolSelection'; break;
-                        case 'gameScreen': backTarget = state.gameMode === 'pvp' ? 'mainMenu' : 'difficultySelection'; isGameScreen = true; game.start(); break;
+                        case 'gameScreen':
+                            backTarget = state.gameMode === 'pvp' ? 'mainMenu' : 'difficultySelection'; isGameScreen = true; game.start();
+                            break;
                     }
                     if (backTarget) {
                         backButton.style.display = 'block'; backButton.dataset.target = backTarget;
                         backButton.classList.toggle('btn-header', isGameScreen);
-                        if (isGameScreen) { document.querySelector('.game-header').prepend(backButton); } else { activeView.appendChild(backButton); }
+                        if (isGameScreen) { document.querySelector('.game-header').prepend(backButton); }
+                        else { activeView.appendChild(backButton); }
                     } else { backButton.style.display = 'none'; }
                 },
                 update() { this.updateBoard(); this.updateTurnIndicator(); this.updateScoreDisplay(); },
@@ -227,10 +295,11 @@
                 updateTurnIndicator() {
                     const currentClass = state.isOTurn ? O_CLASS : X_CLASS;
                     dom.displays.turn.innerText = `${currentClass.toUpperCase()}'s Turn`;
-                    dom.displays.turn.className = `turn-display ${currentClass}`; dom.gameBoard.className = `turn-${currentClass}`;
+                    dom.displays.turn.className = `turn-display ${currentClass}`;
+                    dom.gameBoard.className = `turn-${currentClass}`;
                 },
                 updateScoreDisplay() { dom.displays.score.innerHTML = `X: <span class="score" id="score-x">${state.score.x}</span> | O: <span class="score" id="score-o">${state.score.o}</span>`; },
-                flashScore(winner) { const scoreSpan = document.getElementById(`score-${winner}`); if(scoreSpan) { scoreSpan.classList.add('updated'); setTimeout(() => scoreSpan.classList.remove('updated'), 400); } },
+                flashScore(winner) { const scoreSpan = document.getElementById(`score-${winner}`); if (scoreSpan) { scoreSpan.classList.add('updated'); setTimeout(() => scoreSpan.classList.remove('updated'), 400); } },
                 drawWinningLine(winningItem) {
                     const boardRect = dom.gameBoard.getBoundingClientRect(); const cellSize = boardRect.width / 3; const halfCell = cellSize / 2;
                     const coords = {
@@ -297,7 +366,7 @@
                     if (!state.isGameActive) return;
                     if (state.difficulty === 'easy') {
                         const emptyCells = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
-                        if (emptyCells.length > 0) {
+                        if(emptyCells.length > 0) {
                             const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
                             game.placeMark(randomIndex, state.aiMark); this.announceMove(randomIndex); game.processMove(state.aiMark);
                         }
@@ -315,13 +384,18 @@
                         } else { game.placeMark(playerWinningMove, state.aiMark); this.announceMove(playerWinningMove); }
                         game.processMove(state.aiMark); return;
                     }
-                    const bestMove = this.minimax(state.board, state.aiMark).index;
+                    // --- BUG FIX IS HERE ---
+                    // Pass a *copy* of the board to the AI's thinking process to prevent it from breaking the live game.
+                    const bestMove = this.minimax([...state.board], state.aiMark).index;
                     game.placeMark(bestMove, state.aiMark); this.announceMove(bestMove); game.processMove(state.aiMark);
                 },
                 announceMove: (index) => ui.announce(`AI placed ${state.aiMark.toUpperCase()} in cell ${index + 1}`),
                 findWinningMove(player) {
                     for (let i = 0; i < 9; i++) {
-                        if (state.board[i] === null) { const tempBoard = [...state.board]; tempBoard[i] = player; if (game.checkWin(player, tempBoard)) return i; }
+                        if (state.board[i] === null) {
+                            const tempBoard = [...state.board]; tempBoard[i] = player;
+                            if (game.checkWin(player, tempBoard)) return i;
+                        }
                     }
                     return null;
                 },
@@ -335,23 +409,47 @@
                     if (game.checkWin(state.playerMark, newBoard)) return { score: -10 };
                     if (game.checkWin(state.aiMark, newBoard)) return { score: 10 };
                     if (availableSpots.length === 0) return { score: 0 };
-                    const moves = availableSpots.map(index => {
-                        const move = { index }; newBoard[index] = player;
-                        move.score = this.minimax(newBoard, player === state.aiMark ? state.playerMark : state.aiMark).score;
-                        newBoard[index] = null; return move;
-                    });
-                    return player === state.aiMark ? moves.reduce((a, b) => a.score > b.score ? a : b) : moves.reduce((a, b) => a.score < b.score ? a : b);
+                    const moves = [];
+                    for (let i = 0; i < availableSpots.length; i++) {
+                        const move = {};
+                        move.index = availableSpots[i];
+                        newBoard[availableSpots[i]] = player;
+                        if (player === state.aiMark) {
+                            const result = this.minimax(newBoard, state.playerMark);
+                            move.score = result.score;
+                        } else {
+                            const result = this.minimax(newBoard, state.aiMark);
+                            move.score = result.score;
+                        }
+                        newBoard[availableSpots[i]] = null;
+                        moves.push(move);
+                    }
+                    let bestMove;
+                    if (player === state.aiMark) {
+                        let bestScore = -10000;
+                        for (let i = 0; i < moves.length; i++) {
+                            if (moves[i].score > bestScore) { bestScore = moves[i].score; bestMove = moves[i]; }
+                        }
+                    } else {
+                        let bestScore = 10000;
+                        for (let i = 0; i < moves.length; i++) {
+                            if (moves[i].score < bestScore) { bestScore = moves[i].score; bestMove = moves[i]; }
+                        }
+                    }
+                    return bestMove;
                 }
             };
             function setupEventListeners() {
                 dom.buttons.pvp.addEventListener('click', () => { state.gameMode = 'pvp'; ui.showView('gameScreen'); });
                 dom.buttons.pvc.addEventListener('click', () => { state.gameMode = 'pvc'; ui.showView('symbolSelection'); });
                 dom.buttons.symbolChoices.forEach(btn => btn.addEventListener('click', (e) => {
-                    state.playerMark = e.target.dataset.symbol; state.aiMark = state.playerMark === X_CLASS ? O_CLASS : X_CLASS;
+                    state.playerMark = e.target.dataset.symbol;
+                    state.aiMark = state.playerMark === X_CLASS ? O_CLASS : X_CLASS;
                     ui.showView('difficultySelection');
                 }));
                 [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
-                    state.difficulty = e.target.dataset.difficulty; ui.showView('gameScreen');
+                    state.difficulty = e.target.dataset.difficulty;
+                    ui.showView('gameScreen');
                 }));
                 dom.buttons.universalBack.addEventListener('click', (e) => {
                     const targetViewId = e.target.dataset.target;
