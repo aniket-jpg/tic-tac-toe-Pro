@@ -185,8 +185,8 @@
                 playClick() { if (!state.soundOn) return; dom.sounds.click.currentTime = 0; dom.sounds.click.play().catch(()=>{}); },
                 playWin() { if (!state.soundOn) return; dom.sounds.win.currentTime = 0; dom.sounds.win.play().catch(()=>{}); },
                 fadeInMusic() {
-                    if (!state.soundOn || this.fadeInterval || dom.sounds.bgMusic.volume > 0) return;
                     const music = dom.sounds.bgMusic;
+                    if (!state.soundOn || this.fadeInterval || !music.paused) return; // The BUG FIX is here: check if music is paused
                     music.volume = 0;
                     const promise = music.play();
                     if (promise !== undefined) {
@@ -243,7 +243,8 @@
                         soundButton.style.display = 'block'; activeView.appendChild(soundButton); soundButton.classList.remove('btn-header');
                     } else if (isGameScreen) {
                         soundButton.style.display = 'block'; document.querySelector('.game-header').appendChild(soundButton); soundButton.classList.add('btn-header');
-                    } else { soundButton.style.display = 'none'; }
+                    }
+                    else { soundButton.style.display = 'none'; }
                 },
                 update() { this.updateBoard(); this.updateTurnIndicator(); this.updateScoreDisplay(); },
                 updateBoard() { dom.cellElements.forEach((cell, index) => { cell.className = 'cell'; if (state.board[index]) cell.classList.add(state.board[index]); }); },
@@ -382,31 +383,35 @@
                 dom.buttons.soundToggle.addEventListener('click', () => {
                     audio.playClick();
                     state.soundOn = !state.soundOn;
-                    if (state.soundOn) { audio.fadeInMusic(); dom.buttons.soundToggle.textContent = "🔊 Sound On"; }
-                    else { audio.pauseMusic(); dom.buttons.soundToggle.textContent = "🔇 Sound Off"; }
+                    dom.buttons.soundToggle.textContent = state.soundOn ? "🔊 Sound On" : "🔇 Sound Off";
+                    if (state.soundOn) { audio.fadeInMusic(); }
+                    else { audio.pauseMusic(); }
                 });
+                
+                function handleButtonClick(action) {
+                    audio.playClick();
+                    action();
+                }
 
-                dom.buttons.pvp.addEventListener('click', () => { ui.showView('gameScreen'); });
-                dom.buttons.pvc.addEventListener('click', () => { ui.showView('difficultySelection'); });
-                [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => {
+                dom.buttons.pvp.addEventListener('click', () => handleButtonClick(() => { state.gameMode = 'pvp'; ui.showView('gameScreen'); }));
+                dom.buttons.pvc.addEventListener('click', () => handleButtonClick(() => { state.gameMode = 'pvc'; ui.showView('difficultySelection'); }));
+                [dom.buttons.easy, dom.buttons.hard].forEach(btn => btn.addEventListener('click', (e) => handleButtonClick(() => {
                     state.difficulty = e.target.dataset.difficulty;
                     ui.showView('gameScreen');
-                }));
-                dom.buttons.universalBack.addEventListener('click', () => {
-                    ui.toggleOverlay(dom.overlays.exitConfirmation, true);
-                });
-                dom.buttons.cancelExit.addEventListener('click', () => { ui.toggleOverlay(dom.overlays.exitConfirmation, false); });
-                dom.buttons.confirmExit.addEventListener('click', () => {
+                })));
+                dom.buttons.universalBack.addEventListener('click', () => handleButtonClick(() => { ui.toggleOverlay(dom.overlays.exitConfirmation, true); }));
+                dom.buttons.cancelExit.addEventListener('click', () => handleButtonClick(() => { ui.toggleOverlay(dom.overlays.exitConfirmation, false); }));
+                dom.buttons.confirmExit.addEventListener('click', () => handleButtonClick(() => {
                     state.isGameActive = false;
                     ui.toggleOverlay(dom.overlays.exitConfirmation, false);
                     ui.showView(dom.buttons.universalBack.dataset.target);
-                });
-                dom.buttons.restart.addEventListener('click', () => game.start());
+                }));
+                dom.buttons.restart.addEventListener('click', () => handleButtonClick(() => game.start()));
+                
                 dom.gameBoard.addEventListener('click', game.handleCellClick.bind(game));
                 
                 document.querySelectorAll('.btn').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        audio.playClick();
                         const colorVar = button.classList.contains('btn-secondary') ? '--color-o' : '--color-x';
                         const shatterColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
                         effects.createShatter(e.clientX, e.clientY, shatterColor);
